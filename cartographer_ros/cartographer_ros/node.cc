@@ -160,7 +160,9 @@ Node::~Node() { FinishAllTrajectories(); }
 bool Node::HandleSubmapQuery(
     ::cartographer_ros_msgs::SubmapQuery::Request& request,
     ::cartographer_ros_msgs::SubmapQuery::Response& response) {
-  carto::common::MutexLocker lock(&mutex_);
+  carto::common::MutexLocker lock(&mutex_);  // 设置互斥锁
+  // map_builder_bridge_在node.h定义。是一个MapBuilderBridge型的变量。
+  // map_builder_bridge_本质上的功能是由map_builder.cc决定的。
   map_builder_bridge_.HandleSubmapQuery(request, response);
   return true;
 }

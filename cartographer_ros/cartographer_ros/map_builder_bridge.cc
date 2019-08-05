@@ -95,13 +95,18 @@ void PushAndResetLineMarker(visualization_msgs::Marker* marker,
 
 }  // namespace
 
+/*
+ * MapBuilderBridge构造函数，构造函数里只是做了一下实例化赋值。
+ * 函数体是空的，所做的只是实例化赋值了一个map_builder。
+ * map_builder是接口MapBuilderInterface的一个实例化对象。
+ */
 MapBuilderBridge::MapBuilderBridge(
     const NodeOptions& node_options,
     std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
     tf2_ros::Buffer* const tf_buffer)
-    : node_options_(node_options),
-      map_builder_(std::move(map_builder)),
-      tf_buffer_(tf_buffer) {}
+    : node_options_(node_options),           // 初始化node_options_
+      map_builder_(std::move(map_builder)),  // 初始化map_builder_
+      tf_buffer_(tf_buffer) {}               // 初始化tf_buffer_
 
 void MapBuilderBridge::LoadState(const std::string& state_filename,
                                  bool load_frozen_state) {
@@ -163,6 +168,13 @@ bool MapBuilderBridge::SerializeState(const std::string& filename) {
   return writer.Close();
 }
 
+/*
+ * 处理submap查询的，在cartographer_node中被kSubmapQueryServiceName这个Service调用。
+ * 这里基本上就是利用/src/cartographer/cartographer/mapping下的工具来查询指定id的submap的一些信息。
+ * proto是Google提供的一个ProtoBuf库的工具Google Protobuf库，用来实现数据的序列化和反序列化。
+ * 整体上而言，当请求一个查询submap的service时，程序是在这里处理，能够返回一个submap的相关信息。
+ * 最终的处理还是要靠cartographer这个包里面的东西处理，cartographer_ros只是做了一层ROS封装也在这里体现了出来。
+ */
 void MapBuilderBridge::HandleSubmapQuery(
     cartographer_ros_msgs::SubmapQuery::Request& request,
     cartographer_ros_msgs::SubmapQuery::Response& response) {

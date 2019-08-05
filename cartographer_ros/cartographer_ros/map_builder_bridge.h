@@ -55,6 +55,7 @@ class MapBuilderBridge {
     TrajectoryOptions trajectory_options;
   };
 
+  // 构造函数
   MapBuilderBridge(
       const NodeOptions& node_options,
       std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
