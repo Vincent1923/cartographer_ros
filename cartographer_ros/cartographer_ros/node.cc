@@ -748,6 +748,9 @@ void Node::HandleImuMessage(const int trajectory_id,
   sensor_bridge_ptr->HandleImuMessage(sensor_id, msg);
 }
 
+// 订阅sensor_msgs::LaserScan的消息处理函数，最后依然交给了map_builder_bridge_去处理。
+// 实际调用的是map_builder_bridge_中的一个成员类sensor_bridge的函数来处理：
+// map_builder_bridge_.sensor_bridge(trajectory_id)->HandleLaserScanMessage(sensor_id, msg)。
 void Node::HandleLaserScanMessage(const int trajectory_id,
                                   const std::string& sensor_id,
                                   const sensor_msgs::LaserScan::ConstPtr& msg) {

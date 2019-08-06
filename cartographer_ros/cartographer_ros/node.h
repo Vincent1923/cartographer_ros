@@ -100,6 +100,13 @@ class Node {
       const cartographer_ros_msgs::LandmarkList::ConstPtr& msg);
   void HandleImuMessage(int trajectory_id, const std::string& sensor_id,
                         const sensor_msgs::Imu::ConstPtr& msg);
+  /**
+   * @brief HandleLaserScanMessage  订阅sensor_msgs::LaserScan的消息处理函数
+   * @param trajectory_id           trajectory的id
+   * @param sensor_id               sensor_msgs::LaserScan消息的topic名字
+   * @param msg                     sensor_msgs::LaserScan消息
+   * @return
+   */
   void HandleLaserScanMessage(int trajectory_id, const std::string& sensor_id,
                               const sensor_msgs::LaserScan::ConstPtr& msg);
   void HandleMultiEchoLaserScanMessage(
@@ -166,6 +173,13 @@ class Node {
    */
   int AddTrajectory(const TrajectoryOptions& options,
                     const cartographer_ros_msgs::SensorTopics& topics);
+  /**
+   * @brief LaunchSubscribers  订阅传感器发布的消息
+   * @param options            跟trajectory相关的参数配置，如tracking_frame，published_frame等等
+   * @param topics             输入的传感器数据的topic名称
+   * @param trajectory_id      trajectory的id
+   * @return
+   */
   void LaunchSubscribers(const TrajectoryOptions& options,
                          const cartographer_ros_msgs::SensorTopics& topics,
                          int trajectory_id);
