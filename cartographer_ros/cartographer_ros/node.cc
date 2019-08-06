@@ -61,6 +61,9 @@ cartographer_ros_msgs::SensorTopics DefaultSensorTopics() {
 
 // Subscribes to the 'topic' for 'trajectory_id' using the 'node_handle' and
 // calls 'handler' on the 'node' to handle messages. Returns the subscriber.
+// 使用'node_handle'为'trajectory_id'的路径订阅'topic'，并在'node'上调用'handler'来处理消息。返回subscriber。
+// 这里用函数指针void (Node::*handler)(int, const std::string&, const typename MessageType::ConstPtr&)
+// 作为函数SubscribeWithHandler的其中一个形式参数。
 template <typename MessageType>
 ::ros::Subscriber SubscribeWithHandler(
     void (Node::*handler)(int, const std::string&,
@@ -404,28 +407,47 @@ int Node::AddTrajectory(const TrajectoryOptions& options,
   return trajectory_id;
 }
 
+// 订阅传感器发布的消息
 void Node::LaunchSubscribers(const TrajectoryOptions& options,
                              const cartographer_ros_msgs::SensorTopics& topics,
                              const int trajectory_id) {
-  for (const std::string& topic : ComputeRepeatedTopicNames(
+  LOG(WARNING) << "Subscribe topics:";
+  // subscribers_的类型为std::unordered_map<int, std::vector<Subscriber>>，
+  // 它把trajectory id和该路径下所有传感器数据订阅的Subscriber绑定在一起。
+  /*
+   * （1）subscribers_的类型为std::unordered_map<int, std::vector<Subscriber>>，
+   *     它把trajectory id和该路径下所有传感器数据订阅的Subscriber绑定在一起。
+   * （2）SubscribeWithHandler()函数主要作用就是订阅一个以topic为名字的Topic，
+   *     不同的传感器中的topic这个变量是for循环体中的这一句代码赋值的
+   *     const std::string& topic:ComputeRepeatedTopicNames(topics.laser_scan_topic, options.num_laser_scans)，
+   *     然后返回了一个node_handle->subscribe<MessageType>，即返回值类型为::ros::Subscriber。
+   *     在LaunchSubscribers函数里把这个返回值压入了subscribers_[trajectory_id]列表中。
+   * （3）订阅之后的处理是在Node::HandleLaserScanMessage，查看该代码就可以发现最后依然交给了map_builder_bridge_去处理。
+   *     其中这里用函数指针&Node::HandleLaserScanMessage作为函数SubscribeWithHandler的其中一个实际参数。
+   * （4）这里用函数名&Node::HandleLaserScanMessage作为函数SubscribeWithHandler的其中一个输入参数。
+   */
+  for (const std::string& topic : ComputeRepeatedTopicNames(     // 订阅sensor_msgs::LaserScan
            topics.laser_scan_topic, options.num_laser_scans)) {
+    std::cout << "topics.laser_scan_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<sensor_msgs::LaserScan>(
              &Node::HandleLaserScanMessage, trajectory_id, topic, &node_handle_,
              this),
          topic});
   }
-  for (const std::string& topic :
+  for (const std::string& topic :                                        // 订阅sensor_msgs::MultiEchoLaserScan
        ComputeRepeatedTopicNames(topics.multi_echo_laser_scan_topic,
                                  options.num_multi_echo_laser_scans)) {
+    std::cout << "topics.multi_echo_laser_scan_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<sensor_msgs::MultiEchoLaserScan>(
              &Node::HandleMultiEchoLaserScanMessage, trajectory_id, topic,
              &node_handle_, this),
          topic});
   }
-  for (const std::string& topic : ComputeRepeatedTopicNames(
+  for (const std::string& topic : ComputeRepeatedTopicNames(        // 订阅sensor_msgs::PointCloud2
            topics.point_cloud2_topic, options.num_point_clouds)) {
+    std::cout << "topics.point_cloud2_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<sensor_msgs::PointCloud2>(
              &Node::HandlePointCloud2Message, trajectory_id, topic,
@@ -435,11 +457,12 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
 
   // For 2D SLAM, subscribe to the IMU if we expect it. For 3D SLAM, the IMU is
   // required.
-  if (node_options_.map_builder_options.use_trajectory_builder_3d() ||
+  if (node_options_.map_builder_options.use_trajectory_builder_3d() ||     // 订阅sensor_msgs::Imu
       (node_options_.map_builder_options.use_trajectory_builder_2d() &&
        options.trajectory_builder_options.trajectory_builder_2d_options()
            .use_imu_data())) {
     std::string topic = topics.imu_topic;
+    std::cout << "topics.imu_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<sensor_msgs::Imu>(&Node::HandleImuMessage,
                                                 trajectory_id, topic,
@@ -447,24 +470,27 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
          topic});
   }
 
-  if (options.use_odometry) {
+  if (options.use_odometry) {                                                    // 订阅nav_msgs::Odometry
     std::string topic = topics.odometry_topic;
+    std::cout << "topics.odometry_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<nav_msgs::Odometry>(&Node::HandleOdometryMessage,
                                                   trajectory_id, topic,
                                                   &node_handle_, this),
          topic});
   }
-  if (options.use_nav_sat) {
+  if (options.use_nav_sat) {                                                      // 订阅sensor_msgs::NavSatFix
     std::string topic = topics.nav_sat_fix_topic;
+    std::cout << "topics.nav_sat_fix_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<sensor_msgs::NavSatFix>(
              &Node::HandleNavSatFixMessage, trajectory_id, topic, &node_handle_,
              this),
          topic});
   }
-  if (options.use_landmarks) {
+  if (options.use_landmarks) {                                                   // 订阅cartographer_ros_msgs::LandmarkList
     std::string topic = topics.landmark_topic;
+    std::cout << "topics.landmark_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<cartographer_ros_msgs::LandmarkList>(
              &Node::HandleLandmarkMessage, trajectory_id, topic, &node_handle_,

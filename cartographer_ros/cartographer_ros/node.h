@@ -221,7 +221,7 @@ class Node {
   // These are keyed with 'trajectory_id'.
   std::map<int, ::cartographer::mapping::PoseExtrapolator> extrapolators_;
   std::unordered_map<int, TrajectorySensorSamplers> sensor_samplers_;
-  std::unordered_map<int, std::vector<Subscriber>> subscribers_;
+  std::unordered_map<int, std::vector<Subscriber>> subscribers_;            // subscribers_把trajectory id和该路径下所有传感器数据订阅的Subscriber绑定在一起
   std::unordered_set<std::string> subscribed_topics_;                       // 订阅的传感器topic名称的集合
   std::unordered_map<int, bool> is_active_trajectory_ GUARDED_BY(mutex_);
 
