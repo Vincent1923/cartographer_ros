@@ -310,6 +310,17 @@ void Node::PublishConstraintList(
   }
 }
 
+// 返回一条trajectory所期望的SensorIds集合，‘SensorId::id’是期望的ROS topic名称
+/*
+ * cartographer_ros_msgs::SensorTopics定义：
+ *   string laser_scan_topic
+ *   string multi_echo_laser_scan_topic
+ *   string point_cloud2_topic
+ *   string imu_topic
+ *   string odometry_topic
+ *   string nav_sat_fix_topic
+ *   string landmark_topic
+ */
 std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
 Node::ComputeExpectedSensorIds(
     const TrajectoryOptions& options,
@@ -318,50 +329,71 @@ Node::ComputeExpectedSensorIds(
   using SensorType = SensorId::SensorType;
   std::set<SensorId> expected_topics;
   // Subscribe to all laser scan, multi echo laser scan, and point cloud topics.
+  // 订阅所有laser scan，multi echo laser scan和point cloud主题。
+  // 函数 ComputeRepeatedTopicNames 定义在node_constants.h
+  // SensorId会把SensorType（传感器类型）和传感器数据的topic名称（类型为std::string）绑定在一起。
+  LOG(WARNING) << "Expected topics:";
   for (const std::string& topic : ComputeRepeatedTopicNames(
            topics.laser_scan_topic, options.num_laser_scans)) {
     expected_topics.insert(SensorId{SensorType::RANGE, topic});
+    std::cout << "topics.laser_scan_topic: " << topic << std::endl;
   }
   for (const std::string& topic :
        ComputeRepeatedTopicNames(topics.multi_echo_laser_scan_topic,
                                  options.num_multi_echo_laser_scans)) {
     expected_topics.insert(SensorId{SensorType::RANGE, topic});
+    std::cout << "topics.multi_echo_laser_scan_topic: " << topic << std::endl;
   }
   for (const std::string& topic : ComputeRepeatedTopicNames(
            topics.point_cloud2_topic, options.num_point_clouds)) {
     expected_topics.insert(SensorId{SensorType::RANGE, topic});
+    std::cout << "topics.point_cloud2_topic: " << topic << std::endl;
   }
   // For 2D SLAM, subscribe to the IMU if we expect it. For 3D SLAM, the IMU is
   // required.
+  // 对于2D SLAM，如果我们需要IMU，就订阅。对于3D SLAM，需要订阅IMU。
   if (node_options_.map_builder_options.use_trajectory_builder_3d() ||
       (node_options_.map_builder_options.use_trajectory_builder_2d() &&
        options.trajectory_builder_options.trajectory_builder_2d_options()
            .use_imu_data())) {
     expected_topics.insert(SensorId{SensorType::IMU, topics.imu_topic});
+    std::cout << "topics.imu_topic: " << topics.imu_topic << std::endl;
   }
   // Odometry is optional.
+  // Odometry（里程计数据）是可选的。
   if (options.use_odometry) {
     expected_topics.insert(
         SensorId{SensorType::ODOMETRY, topics.odometry_topic});
+    std::cout << "topics.odometry_topic: " << topics.odometry_topic << std::endl;
   }
   // NavSatFix is optional.
+  // NavSatFix 是可选的。
   if (options.use_nav_sat) {
     expected_topics.insert(
         SensorId{SensorType::FIXED_FRAME_POSE, topics.nav_sat_fix_topic});
+    std::cout << "topics.nav_sat_fix_topic: " << topics.nav_sat_fix_topic << std::endl;
   }
   // Landmark is optional.
+  // Landmark 是可选的。
   if (options.use_landmarks) {
     expected_topics.insert(SensorId{SensorType::LANDMARK, kLandmarkTopic});
+    std::cout << "kLandmarkTopic: " << kLandmarkTopic << std::endl;
   }
   return expected_topics;
 }
 
+/*
+ * 同样，AddTrajectory函数也是通过调用map_builder_bridge_中的AddTrajectory来处理。
+ * 同时，每增加一条轨迹，都需要给该轨迹增加必要的处理，比如添加位姿估计的AddExtrapolator，
+ * 设置传感器的AddSensorSamplers，用来订阅必要的Topic以接收数据的LaunchSubscribers等。
+ */
 int Node::AddTrajectory(const TrajectoryOptions& options,
                         const cartographer_ros_msgs::SensorTopics& topics) {
   const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
-      expected_sensor_ids = ComputeExpectedSensorIds(options, topics);
+      expected_sensor_ids = ComputeExpectedSensorIds(options, topics);  // expected_sensor_ids为我们要订阅的传感器topics名称的集合
   const int trajectory_id =
       map_builder_bridge_.AddTrajectory(expected_sensor_ids, options);
+  LOG(WARNING) << "trajectory_id: " << trajectory_id;
   AddExtrapolator(trajectory_id, options);
   AddSensorSamplers(trajectory_id, options);
   LaunchSubscribers(options, topics, trajectory_id);
@@ -514,24 +546,33 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
   return status_response;
 }
 
+// 前面一些异常情况的处理，正常情况下调用AddTrajectory函数，增加一条trajectory。
+/*
+ * cartographer_ros_msgs::StartTrajectory定义：
+ *   cartographer_ros_msgs/TrajectoryOptions options
+ *   cartographer_ros_msgs/SensorTopics topics
+ *   ---
+ *   cartographer_ros_msgs/StatusResponse status
+ *   int32 trajectory_id
+ */
 bool Node::HandleStartTrajectory(
     ::cartographer_ros_msgs::StartTrajectory::Request& request,
     ::cartographer_ros_msgs::StartTrajectory::Response& response) {
   carto::common::MutexLocker lock(&mutex_);
   TrajectoryOptions options;
   if (!FromRosMessage(request.options, &options) ||
-      !ValidateTrajectoryOptions(options)) {
+      !ValidateTrajectoryOptions(options)) {                                     // 异常情况的处理
     const std::string error = "Invalid trajectory options.";
     LOG(ERROR) << error;
     response.status.code = cartographer_ros_msgs::StatusCode::INVALID_ARGUMENT;
     response.status.message = error;
-  } else if (!ValidateTopicNames(request.topics, options)) {
+  } else if (!ValidateTopicNames(request.topics, options)) {                     // 异常情况的处理
     const std::string error = "Invalid topics.";
     LOG(ERROR) << error;
     response.status.code = cartographer_ros_msgs::StatusCode::INVALID_ARGUMENT;
     response.status.message = error;
-  } else {
-    response.trajectory_id = AddTrajectory(options, request.topics);
+  } else {                                                                       // 正常情况下调用AddTrajectory函数，增加一条trajectory
+    response.trajectory_id = AddTrajectory(options, request.topics);  // 返回trajectory的id
     response.status.code = cartographer_ros_msgs::StatusCode::OK;
     response.status.message = "Success.";
   }

@@ -130,6 +130,12 @@ class Node {
   bool HandleSubmapQuery(
       cartographer_ros_msgs::SubmapQuery::Request& request,
       cartographer_ros_msgs::SubmapQuery::Response& response);
+  /**
+   * @brief HandleStartTrajectory  Service kStartTrajectoryServiceName绑定的函数句柄，
+   *                               前面一些异常情况的处理，正常情况下调用AddTrajectory函数，增加一条trajectory
+   * @return true                  增加一条trajectory成功
+   *         false                 增加一条trajectory失败
+   */
   bool HandleStartTrajectory(
       cartographer_ros_msgs::StartTrajectory::Request& request,
       cartographer_ros_msgs::StartTrajectory::Response& response);
@@ -138,12 +144,26 @@ class Node {
       cartographer_ros_msgs::FinishTrajectory::Response& response);
   bool HandleWriteState(cartographer_ros_msgs::WriteState::Request& request,
                         cartographer_ros_msgs::WriteState::Response& response);
+  /**
+   * @brief ComputeExpectedSensorIds  返回一条trajectory所期望的SensorIds集合，‘SensorId::id’是期望的传感器的ROS topic名称
+   * @param options                   跟trajectory相关的参数配置，如tracking_frame，published_frame等等
+   * @param topics                    输入的传感器数据的topic名称
+   * @return                          一条trajectory所期望的SensorIds集合
+   *                                  SensorId会把SensorType（传感器类型）和传感器数据的topic名称（类型为std::string）绑定在一起
+   */
   // Returns the set of SensorIds expected for a trajectory.
   // 'SensorId::id' is the expected ROS topic name.
+  // 返回一条trajectory所期望的SensorIds集合，‘SensorId::id’是期望的ROS topic名称
   std::set<::cartographer::mapping::TrajectoryBuilderInterface::SensorId>
   ComputeExpectedSensorIds(
       const TrajectoryOptions& options,
       const cartographer_ros_msgs::SensorTopics& topics) const;
+  /**
+   * @brief AddTrajectory  增加一条trajectory，并返回其id
+   * @param options        跟trajectory相关的参数配置，如tracking_frame，published_frame等等
+   * @param topics         输入的传感器数据的topic名称
+   * @return               增加的trajectory的id
+   */
   int AddTrajectory(const TrajectoryOptions& options,
                     const cartographer_ros_msgs::SensorTopics& topics);
   void LaunchSubscribers(const TrajectoryOptions& options,
@@ -202,7 +222,7 @@ class Node {
   std::map<int, ::cartographer::mapping::PoseExtrapolator> extrapolators_;
   std::unordered_map<int, TrajectorySensorSamplers> sensor_samplers_;
   std::unordered_map<int, std::vector<Subscriber>> subscribers_;
-  std::unordered_set<std::string> subscribed_topics_;
+  std::unordered_set<std::string> subscribed_topics_;                       // 订阅的传感器topic名称的集合
   std::unordered_map<int, bool> is_active_trajectory_ GUARDED_BY(mutex_);
 
   // We have to keep the timer handles of ::ros::WallTimers around, otherwise
