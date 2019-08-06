@@ -524,12 +524,20 @@ bool Node::ValidateTopicNames(
   return true;
 }
 
+/*
+ * （1）返回值类型是cartographer_ros_msgs::StatusResponse,
+ *     在/src/cartographer_ros/cartographer_ros_msgs/msg/StatusCode.msg中定义。
+ * （2）前面检查了一下是否可以关掉，指定id是否存在，是否已经被Finished了等情况后，
+ *     如果一切正常，则停止订阅Topic、清除id及其他与该trajectory相关的量。
+ * （3）最后调用map_builder_bridge_中的FinishTrajectory函数。
+ */
 cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
     const int trajectory_id) {
   cartographer_ros_msgs::StatusResponse status_response;
 
   // First, check if we can actually finish the trajectory.
-  if (map_builder_bridge_.GetFrozenTrajectoryIds().count(trajectory_id)) {
+  // 首先，检查我们是否能够真正结束trajectory。
+  if (map_builder_bridge_.GetFrozenTrajectoryIds().count(trajectory_id)) {     // 检查id为trajectory_id的trajectory是否为frozen状态
     const std::string error =
         "Trajectory " + std::to_string(trajectory_id) + " is frozen.";
     LOG(ERROR) << error;
@@ -537,7 +545,7 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
     status_response.message = error;
     return status_response;
   }
-  if (is_active_trajectory_.count(trajectory_id) == 0) {
+  if (is_active_trajectory_.count(trajectory_id) == 0) {                       // 检查id为trajectory_id的trajectory是否已经创建
     const std::string error =
         "Trajectory " + std::to_string(trajectory_id) + " is not created yet.";
     LOG(ERROR) << error;
@@ -545,7 +553,7 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
     status_response.message = error;
     return status_response;
   }
-  if (!is_active_trajectory_[trajectory_id]) {
+  if (!is_active_trajectory_[trajectory_id]) {                                 // 检查id为trajectory_id的trajectory是否已经被Finished
     const std::string error = "Trajectory " + std::to_string(trajectory_id) +
                               " has already been finished.";
     LOG(ERROR) << error;
@@ -556,6 +564,7 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
   }
 
   // Shutdown the subscribers of this trajectory.
+  // 关闭此trajectory的subscribers。
   for (auto& entry : subscribers_[trajectory_id]) {
     entry.subscriber.shutdown();
     subscribed_topics_.erase(entry.topic);
@@ -645,6 +654,13 @@ int Node::AddOfflineTrajectory(
   return trajectory_id;
 }
 
+// 根据请求的trajectory_id，结束该trajectory
+/*
+ * cartographer_ros_msgs::FinishTrajectory定义：
+ *   int32 trajectory_id
+ *   ---
+ *   cartographer_ros_msgs/StatusResponse status
+ */
 bool Node::HandleFinishTrajectory(
     ::cartographer_ros_msgs::FinishTrajectory::Request& request,
     ::cartographer_ros_msgs::FinishTrajectory::Response& response) {

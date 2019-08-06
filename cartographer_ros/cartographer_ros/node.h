@@ -146,6 +146,12 @@ class Node {
   bool HandleStartTrajectory(
       cartographer_ros_msgs::StartTrajectory::Request& request,
       cartographer_ros_msgs::StartTrajectory::Response& response);
+  /**
+   * @brief HandleFinishTrajectory  Service kFinishTrajectoryServiceName绑定的函数句柄，
+   *                                根据请求的trajectory_id，结束该trajectory
+   * @return true                   结束一条trajectory成功
+   *         false                  结束一条trajectory失败
+   */
   bool HandleFinishTrajectory(
       cartographer_ros_msgs::FinishTrajectory::Request& request,
       cartographer_ros_msgs::FinishTrajectory::Response& response);
@@ -194,6 +200,10 @@ class Node {
   bool ValidateTrajectoryOptions(const TrajectoryOptions& options);
   bool ValidateTopicNames(const ::cartographer_ros_msgs::SensorTopics& topics,
                           const TrajectoryOptions& options);
+  /**
+   * @brief FinishTrajectoryUnderLock               根据trajectory_id，结束该trajectory
+   * @return cartographer_ros_msgs::StatusResponse  结束一条指定id的trajectory后的反馈结果
+   */
   cartographer_ros_msgs::StatusResponse FinishTrajectoryUnderLock(
       int trajectory_id) REQUIRES(mutex_);
 
