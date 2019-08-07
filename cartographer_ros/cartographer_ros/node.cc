@@ -94,9 +94,10 @@ Node::Node(
   carto::common::MutexLocker lock(&mutex_);  // 设置一个互斥锁
 
   /*
-   * cartographer_ros发布的topics
+   * Publisher
+   * cartographer_ros发布的topics。
    * 告知master节点，我们将要向kSubmapListTopic这个Topic上发布一个::cartographer_ros_msgs::SubmapList型的message，
-   * 而第二个参数是publishing的缓存大小；发布的该Topic即可允许其他节点获取到我们构建的Submap的信息。
+   * 而第二个参数kLatestOnlyPublisherQueueSize是publishing的缓存大小；发布的该Topic即可允许其他节点获取到我们构建的Submap的信息。
    * kSubmapListTopic 等常量定义在cartographer_ros/node_constants.h
    */
   submap_list_publisher_ =
@@ -133,25 +134,25 @@ Node::Node(
           kScanMatchedPointCloudTopic, kLatestOnlyPublisherQueueSize);      // kScanMatchedPointCloudTopic[] = "scan_matched_points2";
 
   /*
-   * wall_timers在node.h中定义，是一个存储::ros::WallTimer类型的vector，
-   * 以下通过vector的push_back操作依次将五个::ros::WallTimer型对象插入这个vector的末尾。
-   * ::ros::WallTimer这个类参见如下链接：http://docs.ros.org/jade/api/roscpp/html/classros_1_1WallTimer.html
-   * 简单说，这是一个定时器，这里分别为如下的五个函数设置了定时器。参数就是node_options_里的各项参数。
-   * 接下来是为几个Topic设置了定时器，以及定时器函数。猜测这几个定时器函数里就是定时往Topic上发布消息。
+   * （1）wall_timers在node.h中定义，是一个存储::ros::WallTimer类型的vector，
+   *     以下通过vector的push_back操作依次将五个::ros::WallTimer型对象插入这个vector的末尾。
+   * （2）::ros::WallTimer这个类参见如下链接：http://docs.ros.org/jade/api/roscpp/html/classros_1_1WallTimer.html
+   *     简单说，这是一个定时器，这里分别为如下的五个函数设置了定时器。定时器的参数就是node_options_里的各项参数。
+   * （3）接下来是为几个Topic设置了定时器，以及定时器函数。猜测这几个定时器函数里就是定时往Topic上发布消息。
    */
-  wall_timers_.push_back(node_handle_.createWallTimer(
+  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kSubmapListTopic上发布消息的定时器
       ::ros::WallDuration(node_options_.submap_publish_period_sec),
       &Node::PublishSubmapList, this));
   wall_timers_.push_back(node_handle_.createWallTimer(
       ::ros::WallDuration(node_options_.pose_publish_period_sec),
       &Node::PublishTrajectoryStates, this));
-  wall_timers_.push_back(node_handle_.createWallTimer(
+  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kTrajectoryNodeListTopic上发布消息的定时器
       ::ros::WallDuration(node_options_.trajectory_publish_period_sec),
       &Node::PublishTrajectoryNodeList, this));
-  wall_timers_.push_back(node_handle_.createWallTimer(
+  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kLandmarkPosesListTopic上发布消息的定时器
       ::ros::WallDuration(node_options_.trajectory_publish_period_sec),
       &Node::PublishLandmarkPosesList, this));
-  wall_timers_.push_back(node_handle_.createWallTimer(
+  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kConstraintListTopic上发布消息的定时器
       ::ros::WallDuration(kConstraintPublishPeriodSec),
       &Node::PublishConstraintList, this));
 }
@@ -170,6 +171,8 @@ bool Node::HandleSubmapQuery(
   return true;
 }
 
+// 调用map_builder_bridge_.GetSubmapList()函数获取submap的list，
+// 然后用ros的publish函数向Topic上广播这个消息。
 void Node::PublishSubmapList(const ::ros::WallTimerEvent& unused_timer_event) {
   carto::common::MutexLocker lock(&mutex_);
   submap_list_publisher_.publish(map_builder_bridge_.GetSubmapList());

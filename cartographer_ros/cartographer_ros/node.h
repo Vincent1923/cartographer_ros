@@ -189,12 +189,32 @@ class Node {
   void LaunchSubscribers(const TrajectoryOptions& options,
                          const cartographer_ros_msgs::SensorTopics& topics,
                          int trajectory_id);
+  /**
+   * @brief PublishSubmapList  在Topic kSubmapListTopic上发布::cartographer_ros_msgs::SubmapList类型的消息
+   * @param timer_event
+   * @return
+   */
   void PublishSubmapList(const ::ros::WallTimerEvent& timer_event);
   void AddExtrapolator(int trajectory_id, const TrajectoryOptions& options);
   void AddSensorSamplers(int trajectory_id, const TrajectoryOptions& options);
   void PublishTrajectoryStates(const ::ros::WallTimerEvent& timer_event);
+  /**
+   * @brief PublishTrajectoryNodeList  在Topic kTrajectoryNodeListTopic上发布::visualization_msgs::MarkerArray类型的消息
+   * @param timer_event
+   * @return
+   */
   void PublishTrajectoryNodeList(const ::ros::WallTimerEvent& timer_event);
+  /**
+   * @brief PublishLandmarkPosesList  在Topic kLandmarkPosesListTopic上发布::visualization_msgs::MarkerArray类型的消息
+   * @param timer_event
+   * @return
+   */
   void PublishLandmarkPosesList(const ::ros::WallTimerEvent& timer_event);
+  /**
+   * @brief PublishConstraintList  在Topic kConstraintListTopic上发布::visualization_msgs::MarkerArray类型的消息
+   * @param timer_event
+   * @return
+   */
   void PublishConstraintList(const ::ros::WallTimerEvent& timer_event);
   void SpinOccupancyGridThreadForever();
   bool ValidateTrajectoryOptions(const TrajectoryOptions& options);
