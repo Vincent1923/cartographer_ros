@@ -90,7 +90,7 @@ class MapBuilderBridge {
   std::unordered_map<int, TrajectoryState> GetTrajectoryStates()
       EXCLUDES(mutex_);
   visualization_msgs::MarkerArray GetTrajectoryNodeList();
-  visualization_msgs::MarkerArray GetLandmarkPosesList();
+  visualization_msgs::MarkerArray GetLandmarkPosesList();  // 获取landmark的pose列表
   visualization_msgs::MarkerArray GetConstraintList();
 
   SensorBridge* sensor_bridge(int trajectory_id);

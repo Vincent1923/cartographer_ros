@@ -57,6 +57,7 @@ visualization_msgs::Marker CreateTrajectoryMarker(const int trajectory_id,
   return marker;
 }
 
+// 返回一个指定id的landmark在container中的索引值；该函数也并非MapBuilderBridge的成员函数
 int GetLandmarkIndex(
     const std::string& landmark_id,
     std::unordered_map<std::string, int>* landmark_id_to_index) {
@@ -69,6 +70,7 @@ int GetLandmarkIndex(
   return it->second;
 }
 
+// 创建一个landmark
 visualization_msgs::Marker CreateLandmarkMarker(int landmark_index,
                                                 const Rigid3d& landmark_pose,
                                                 const std::string& frame_id) {
@@ -362,6 +364,7 @@ visualization_msgs::MarkerArray MapBuilderBridge::GetTrajectoryNodeList() {
   return trajectory_node_list;
 }
 
+// 获取landmark的pose列表
 visualization_msgs::MarkerArray MapBuilderBridge::GetLandmarkPosesList() {
   visualization_msgs::MarkerArray landmark_poses_list;
   const std::map<std::string, Rigid3d> landmark_poses =
