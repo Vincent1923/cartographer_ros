@@ -78,6 +78,12 @@ class MapBuilderBridge {
    * @return
    */
   void LoadState(const std::string& state_filename, bool load_frozen_state);
+  /**
+   * @brief AddTrajectory        添加一条trajectory
+   * @param expected_sensor_ids  一条trajectory所期望的SensorIds集合
+   * @param trajectory_options   跟trajectory相关的参数配置，如tracking_frame，published_frame等等
+   * @return                     增加的trajectory的id
+   */
   int AddTrajectory(
       const std::set<
           ::cartographer::mapping::TrajectoryBuilderInterface::SensorId>&

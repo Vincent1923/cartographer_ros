@@ -127,10 +127,24 @@ void MapBuilderBridge::LoadState(const std::string& state_filename,
   map_builder_->LoadState(&stream, load_frozen_state);
 }
 
+// 添加一条trajectory
 int MapBuilderBridge::AddTrajectory(
     const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>&
         expected_sensor_ids,
     const TrajectoryOptions& trajectory_options) {
+  /*
+   * 1. 调用了map_builder_->AddTrajectoryBuilder，这已经是cartographer项目中的代码了。
+   * 2. std::bind用来将可调用对象与其参数进行绑定。绑定之后的结果可以使用std::function进行保存，
+   *     并延迟调用到任何需要的时候。一般来讲，它主要有两大作用：
+   *    （1）将可调用对象与其参数一起绑定成为一个仿函数；
+   *    （2）将多元可调用对象转换成为1元或是（n-1）元调用对象，既只是绑定部分参数。
+   *    实际上std::bind的返回类型是一个std内部定义的仿函数类型，在这里就只需要知道它是一个仿函数，
+   *    可以赋值给一个std::function，这里直接用std::function类型来保存std::bind的返回值也是可以的。
+   *    其中std::placeholders::_1是一个占位符，代表这个位置将在函数调用时，被传入的第一个参数代替。
+   * 3. 所以map_builder_->AddTrajectoryBuilder这个函数的第三个参数是一个std:function型的。
+   *    这样，在map_builder_->AddTrajectoryBuilder内部可以通过如下方式调用MapBuilderBridge::OnLocalSlamResult
+   *    call_func(para1,para2,..., std::function);
+   */
   const int trajectory_id = map_builder_->AddTrajectoryBuilder(
       expected_sensor_ids, trajectory_options.trajectory_builder_options,
       ::std::bind(&MapBuilderBridge::OnLocalSlamResult, this,
