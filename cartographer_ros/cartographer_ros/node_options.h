@@ -28,13 +28,15 @@
 namespace cartographer_ros {
 
 // Top-level options of Cartographer's ROS integration.
+// Cartographer ROS集成的最上层选项
 struct NodeOptions {
+  // map_builder_options 的类型为MapBuilderOptions，这是一个ProtocolBuffer消息类型，用于做串行化的数据结构信息
   ::cartographer::mapping::proto::MapBuilderOptions map_builder_options;
-  std::string map_frame;
-  double lookup_transform_timeout_sec;
-  double submap_publish_period_sec;
-  double pose_publish_period_sec;
-  double trajectory_publish_period_sec;
+  std::string map_frame;                 // 地图坐标系名字
+  double lookup_transform_timeout_sec;   // 使用tf2进行转换搜素的超时时间的秒数
+  double submap_publish_period_sec;      // 发布submap位置的间隔秒数，如0.3s
+  double pose_publish_period_sec;        // 发布位置的间隔秒数，如5e-3对应200Hz
+  double trajectory_publish_period_sec;  // 发布轨迹标记的间隔秒数，如30e-3对应30ms
 };
 
 NodeOptions CreateNodeOptions(

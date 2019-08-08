@@ -28,6 +28,8 @@ NodeOptions CreateNodeOptions(
     ::cartographer::common::LuaParameterDictionary* const
         lua_parameter_dictionary) {
   NodeOptions options;
+  // 获取map_builder的构建地图的配置选项，具体的配置文件为
+  // "/home/aicrobo/catkin_cartographer/src/cartographer/configuration_files/map_builder.lua"
   options.map_builder_options =
       ::cartographer::mapping::CreateMapBuilderOptions(
           lua_parameter_dictionary->GetDictionary("map_builder").get());
@@ -44,13 +46,26 @@ NodeOptions CreateNodeOptions(
 }
 
 std::tuple<NodeOptions, TrajectoryOptions> LoadOptions(
+    // configuration_directory表示配置文件路径名字，configuration_basename表示配置文件名字。
     const std::string& configuration_directory,
     const std::string& configuration_basename) {
+  /*
+   * （1）file_resolver为一个std::unique_ptr指针，指向的对象类型为cartographer::common::ConfigurationFileResolver，
+   *     这个类主要用于解析配置文件。
+   * （2）make_unique是smart pointer，创建并返回unique_ptr至指定类型的对象，这里指向的对象类型为
+   *     cartographer::common::ConfigurationFileResolver，而对象的构造函数参数为数组
+   *     std::vector<std::string>{configuration_directory}，这个类主要用于解析配置文件。
+   */
   auto file_resolver = cartographer::common::make_unique<
       cartographer::common::ConfigurationFileResolver>(
       std::vector<std::string>{configuration_directory});
+  /*
+   * （1）code包含配置文件configuration_basename（例如hokuyo_2d.lua）中的全部内容
+   * （2）函数GetFileContentOrDie获取配置文件configuration_basename中的全部内容，存放在code中
+   */
   const std::string code =
       file_resolver->GetFileContentOrDie(configuration_basename);
+//   std::cout << "code: " << std::endl << code << std::endl << "end of code" << std::endl;
   cartographer::common::LuaParameterDictionary lua_parameter_dictionary(
       code, std::move(file_resolver));
 
