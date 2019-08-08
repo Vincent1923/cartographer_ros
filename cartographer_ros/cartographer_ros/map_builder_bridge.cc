@@ -110,9 +110,12 @@ MapBuilderBridge::MapBuilderBridge(
       map_builder_(std::move(map_builder)),  // 初始化map_builder_
       tf_buffer_(tf_buffer) {}               // 初始化tf_buffer_
 
+// 调用了map_builder_的成员函数LoadState来加载一个.pbstream文件。
+// map_builder_是接口MapBuilderInterface的实例化对象，而根据是2d还是3d情况，其具体实现会略有不同。
 void MapBuilderBridge::LoadState(const std::string& state_filename,
                                  bool load_frozen_state) {
   // Check if suffix of the state file is ".pbstream".
+  // 检查状态文件的后缀是否为“.pbstream”。
   const std::string suffix = ".pbstream";
   CHECK_EQ(state_filename.substr(
                std::max<int>(state_filename.size() - suffix.size(), 0)),

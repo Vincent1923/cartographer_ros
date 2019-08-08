@@ -71,6 +71,12 @@ class MapBuilderBridge {
   MapBuilderBridge(const MapBuilderBridge&) = delete;
   MapBuilderBridge& operator=(const MapBuilderBridge&) = delete;  //重载了赋值操作
 
+  /**
+   * @brief LoadState          调用了map_builder_的成员函数LoadState来加载一个.pbstream文件
+   * @param state_filename     .pbstream文件的路径
+   * @param load_frozen_state  默认值为true
+   * @return
+   */
   void LoadState(const std::string& state_filename, bool load_frozen_state);
   int AddTrajectory(
       const std::set<
