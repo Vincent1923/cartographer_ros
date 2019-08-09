@@ -102,6 +102,11 @@ class MapBuilderBridge {
       cartographer_ros_msgs::SubmapQuery::Response& response);
 
   std::set<int> GetFrozenTrajectoryIds();
+  /**
+   * @brief GetSubmapList                       在往kSubmapListTopic这个Topic上发布数据时，
+   *                                            被Node::PublishSubmapList调用的，用来获取Submap的列表
+   * @return cartographer_ros_msgs::SubmapList  Submap的列表
+   */
   cartographer_ros_msgs::SubmapList GetSubmapList();
   std::unordered_map<int, TrajectoryState> GetTrajectoryStates()
       EXCLUDES(mutex_);

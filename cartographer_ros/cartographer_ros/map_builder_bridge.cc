@@ -226,10 +226,14 @@ void MapBuilderBridge::HandleSubmapQuery(
   response.status.code = cartographer_ros_msgs::StatusCode::OK;
 }
 
+// GetFrozenTrajectoryIds这个函数从名字看是冻结一个trajectory.不太明白具体是什么意思，
+// 个人猜测是一条trajectory已经构建完毕，不再继续扩展之后是不是就把其Frozen并存起来。
 std::set<int> MapBuilderBridge::GetFrozenTrajectoryIds() {
   std::set<int> frozen_trajectory_ids;
+  // 调用map_builder_->pose_graph()->GetTrajectoryNodePoses()来处理。
   const auto node_poses = map_builder_->pose_graph()->GetTrajectoryNodePoses();
   for (const int trajectory_id : node_poses.trajectory_ids()) {
+    // 调用map_builder_->pose_graph()->IsTrajectoryFrozen(trajectory_id)来处理。
     if (map_builder_->pose_graph()->IsTrajectoryFrozen(trajectory_id)) {
       frozen_trajectory_ids.insert(trajectory_id);
     }
@@ -237,6 +241,11 @@ std::set<int> MapBuilderBridge::GetFrozenTrajectoryIds() {
   return frozen_trajectory_ids;
 }
 
+/*
+ * GetSubmapList()函数是在往kSubmapListTopic这个Topic上发布数据时，
+ * 被Node::PublishSubmapList调用的，用来获取Submap的列表。
+ * 该函数主要也是通过调用map_builder_->pose_graph()->GetAllSubmapPoses()来获取列表信息。
+ */
 cartographer_ros_msgs::SubmapList MapBuilderBridge::GetSubmapList() {
   cartographer_ros_msgs::SubmapList submap_list;
   submap_list.header.stamp = ::ros::Time::now();
