@@ -188,11 +188,11 @@ bool MapBuilderBridge::SerializeState(const std::string& filename) {
 }
 
 /*
- * 处理submap查询的，在cartographer_node中被kSubmapQueryServiceName这个Service调用。
- * 这里基本上就是利用/src/cartographer/cartographer/mapping下的工具来查询指定id的submap的一些信息。
- * proto是Google提供的一个ProtoBuf库的工具Google Protobuf库，用来实现数据的序列化和反序列化。
- * 整体上而言，当请求一个查询submap的service时，程序是在这里处理，能够返回一个submap的相关信息。
- * 最终的处理还是要靠cartographer这个包里面的东西处理，cartographer_ros只是做了一层ROS封装也在这里体现了出来。
+ * （1）处理submap查询的，在cartographer_node中被kSubmapQueryServiceName这个Service调用。
+ *     这里基本上就是利用/src/cartographer/cartographer/mapping下的工具来查询指定id的submap的一些信息。
+ * （2）proto是Google提供的一个ProtoBuf库的工具Google Protobuf库，用来实现数据的序列化和反序列化。
+ * （3）整体上而言，当请求一个查询submap的service时，程序是在这里处理，能够返回一个submap的相关信息。
+ *     最终的处理还是要靠cartographer这个包里面的东西处理，cartographer_ros只是做了一层ROS封装也在这里体现了出来。
  */
 void MapBuilderBridge::HandleSubmapQuery(
     cartographer_ros_msgs::SubmapQuery::Request& request,
@@ -200,6 +200,7 @@ void MapBuilderBridge::HandleSubmapQuery(
   cartographer::mapping::proto::SubmapQuery::Response response_proto;
   cartographer::mapping::SubmapId submap_id{request.trajectory_id,
                                             request.submap_index};
+  // 调用map_builder_->SubmapToProto(submap_id, &response_proto)这个函数查询信息，结果放到response这个变量中。
   const std::string error =
       map_builder_->SubmapToProto(submap_id, &response_proto);
   if (!error.empty()) {

@@ -93,6 +93,10 @@ class MapBuilderBridge {
   void RunFinalOptimization();
   bool SerializeState(const std::string& filename);
 
+  /**
+   * @brief HandleSubmapQuery  处理submap查询的，在cartographer_node中被kSubmapQueryServiceName这个Service调用
+   * @return
+   */
   void HandleSubmapQuery(
       cartographer_ros_msgs::SubmapQuery::Request& request,
       cartographer_ros_msgs::SubmapQuery::Response& response);
