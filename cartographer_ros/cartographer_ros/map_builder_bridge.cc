@@ -262,13 +262,20 @@ cartographer_ros_msgs::SubmapList MapBuilderBridge::GetSubmapList() {
   return submap_list;
 }
 
+/*
+ * GetTrajectoryStates函数用来返回一个TrajectoryStates变量组成的unordered_map这个容器。
+ * 这里稍微注意一下，Unordered Map跟我们程序里MapBuilder里的map不是同一个概念。
+ * Unordered Map只是c++中的一种container。
+ */
 std::unordered_map<int, MapBuilderBridge::TrajectoryState>
 MapBuilderBridge::GetTrajectoryStates() {
-  std::unordered_map<int, TrajectoryState> trajectory_states;
+  std::unordered_map<int, TrajectoryState> trajectory_states;  // 变量用来存返回结果
+  // 一个循环，依次取出来TrajectoryState；这里以SensorBridge为索引来取，还不知道为什么
   for (const auto& entry : sensor_bridges_) {
     const int trajectory_id = entry.first;
     const SensorBridge& sensor_bridge = *entry.second;
 
+    // TrajectoryState结构体中的第一个成员LocalSlamData
     std::shared_ptr<const TrajectoryState::LocalSlamData> local_slam_data;
     {
       cartographer::common::MutexLocker lock(&mutex_);
@@ -280,6 +287,13 @@ MapBuilderBridge::GetTrajectoryStates() {
 
     // Make sure there is a trajectory with 'trajectory_id'.
     CHECK_EQ(trajectory_options_.count(trajectory_id), 1);
+    /*
+     * 第trajectory_id个TrajectoryState存入返回变量中：
+     * （1）第二个成员变量std::shared_ptr<const LocalSlamData> local_slam_data
+     *     是通过map_builder_->pose_graph()->GetLocalToGlobalTransform(trajectory_id)获取的。
+     * （2）第三个成员变量std::unique_ptr<cartographer::transform::Rigid3d> published_to_tracking
+     *     是通过sensor_bridge.tf_bridge().LookupToTracking获取的。
+     */
     trajectory_states[trajectory_id] = {
         local_slam_data,
         map_builder_->pose_graph()->GetLocalToGlobalTransform(trajectory_id),
