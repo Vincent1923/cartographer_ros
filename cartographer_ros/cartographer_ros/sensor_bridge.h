@@ -73,8 +73,19 @@ class SensorBridge {
       const std::string& sensor_id,
       const cartographer_ros_msgs::LandmarkList::ConstPtr& msg);
 
+  /**
+   * @brief ToImuData  数据预处理函数，处理IMU数据，返回的是经过变换后的IMU数据
+   * @param msg        IMU数据
+   * @return           相对于tracking_frame坐标系下的IMU数据
+   */
   std::unique_ptr<::cartographer::sensor::ImuData> ToImuData(
       const sensor_msgs::Imu::ConstPtr& msg);
+  /**
+   * @brief HandleImuMessage  处理IMU消息
+   * @param sensor_id         sensor_msgs::Imu消息的topic名字
+   * @param msg               IMU数据
+   * @return
+   */
   void HandleImuMessage(const std::string& sensor_id,
                         const sensor_msgs::Imu::ConstPtr& msg);
   void HandleLaserScanMessage(const std::string& sensor_id,

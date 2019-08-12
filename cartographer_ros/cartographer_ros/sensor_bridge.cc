@@ -131,6 +131,7 @@ void SensorBridge::HandleLandmarkMessage(
   trajectory_builder_->AddSensorData(sensor_id, ToLandmarkData(*msg));
 }
 
+// 数据预处理函数，处理IMU数据，返回的是经过变换后的IMU数据。并非SensorBridge的成员函数。
 std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
     const sensor_msgs::Imu::ConstPtr& msg) {
   CHECK_NE(msg->linear_acceleration_covariance[0], -1)
@@ -161,10 +162,12 @@ std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
           sensor_to_tracking->rotation() * ToEigen(msg->angular_velocity)});
 }
 
+// 处理IMU数据
 void SensorBridge::HandleImuMessage(const std::string& sensor_id,
                                     const sensor_msgs::Imu::ConstPtr& msg) {
   std::unique_ptr<carto::sensor::ImuData> imu_data = ToImuData(msg);
   if (imu_data != nullptr) {
+    // 最终，将线加速度和角加速度传入trajectory_builder_->AddSensorData做处理
     trajectory_builder_->AddSensorData(
         sensor_id,
         carto::sensor::ImuData{imu_data->time, imu_data->linear_acceleration,
