@@ -118,6 +118,10 @@ class MapBuilderBridge {
   visualization_msgs::MarkerArray GetLandmarkPosesList();  // 获取landmark的pose列表
   visualization_msgs::MarkerArray GetConstraintList();
 
+  /**
+   * @brief sensor_bridge  返回指定trajectory_id的SensorBridge变量
+   * @return
+   */
   SensorBridge* sensor_bridge(int trajectory_id);
 
  private:
