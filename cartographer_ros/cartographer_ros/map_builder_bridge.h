@@ -120,6 +120,7 @@ class MapBuilderBridge {
 
   /**
    * @brief sensor_bridge  返回指定trajectory_id的SensorBridge变量
+   * @param trajectory_id  trajectory的id
    * @return
    */
   SensorBridge* sensor_bridge(int trajectory_id);

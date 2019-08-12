@@ -39,6 +39,15 @@ const std::string& CheckNoLeadingSlash(const std::string& frame_id) {
 
 }  // namespace
 
+/*
+ * （1）构造函数做的工作就是把参数表赋值给成员变量
+ * （2）但需要注意的是成员变量中有一个TrajectoryBuilderInterface型的一个指针变量。
+ *     继续跟踪代码我们可以发现，cartographer中各种消息都统一调用了这个成员类的虚函数AddSensorData()。
+ * （3）而CollatedTrajectoryBuilder继承了这个类并实现了AddSensorData()函数。
+ *     这两个类都定义在cartographer中的mapping文件夹下。
+ *     CollatedTrajectoryBuilder的构造函数说明通过统一调用HandleCollatedSensorData()函数，
+ *     来轮询处理kImu(IMU消息)、kRangefinder(测距消息，不仅仅是激光)、kOdometer(里程计消息)等。
+ */
 SensorBridge::SensorBridge(
     const int num_subdivisions_per_laser_scan,
     const std::string& tracking_frame,

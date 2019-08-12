@@ -40,8 +40,10 @@
 namespace cartographer_ros {
 
 // Converts ROS messages into SensorData in tracking frame for the MapBuilder.
+// 在MapBuilder的tracking frame中将ROS消息转换为SensorData。
 class SensorBridge {
  public:
+  // 构造函数
   explicit SensorBridge(
       int num_subdivisions_per_laser_scan, const std::string& tracking_frame,
       double lookup_transform_timeout_sec, tf2_ros::Buffer* tf_buffer,
