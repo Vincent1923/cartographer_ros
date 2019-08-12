@@ -85,11 +85,14 @@ std::unique_ptr<carto::sensor::OdometryData> SensorBridge::ToOdometryData(
           time, ToRigid3d(msg->pose.pose) * sensor_to_tracking->inverse()});
 }
 
+// 处理里程计消息
 void SensorBridge::HandleOdometryMessage(
     const std::string& sensor_id, const nav_msgs::Odometry::ConstPtr& msg) {
+  // odometry_data是在tracking_frame坐标系下的里程计数据
   std::unique_ptr<carto::sensor::OdometryData> odometry_data =
       ToOdometryData(msg);
   if (odometry_data != nullptr) {
+    // 调用trajectory_builder_->AddSensorData()函数对里程计数据进行处理
     trajectory_builder_->AddSensorData(
         sensor_id,
         carto::sensor::OdometryData{odometry_data->time, odometry_data->pose});

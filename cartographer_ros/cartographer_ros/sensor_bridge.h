@@ -59,6 +59,12 @@ class SensorBridge {
    */
   std::unique_ptr<::cartographer::sensor::OdometryData> ToOdometryData(
       const nav_msgs::Odometry::ConstPtr& msg);
+  /**
+   * @brief HandleOdometryMessage  处理里程计消息
+   * @param sensor_id              nav_msgs::Odometry消息的topic名字
+   * @param msg                    里程计数据
+   * @return
+   */
   void HandleOdometryMessage(const std::string& sensor_id,
                              const nav_msgs::Odometry::ConstPtr& msg);
   void HandleNavSatFixMessage(const std::string& sensor_id,
