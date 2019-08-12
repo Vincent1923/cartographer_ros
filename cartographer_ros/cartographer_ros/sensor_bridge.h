@@ -52,6 +52,11 @@ class SensorBridge {
   SensorBridge(const SensorBridge&) = delete;
   SensorBridge& operator=(const SensorBridge&) = delete;
 
+  /**
+   * @brief ToOdometryData  一个预处理的工具函数，返回的是经过变换后的里程计数据，它是相对于tracking_frame坐标系下的
+   * @param msg             里程计数据
+   * @return                相对于tracking_frame坐标系下的里程计数据
+   */
   std::unique_ptr<::cartographer::sensor::OdometryData> ToOdometryData(
       const nav_msgs::Odometry::ConstPtr& msg);
   void HandleOdometryMessage(const std::string& sensor_id,

@@ -57,9 +57,24 @@ SensorBridge::SensorBridge(
       tf_bridge_(tracking_frame, lookup_transform_timeout_sec, tf_buffer),
       trajectory_builder_(trajectory_builder) {}
 
+/*
+ * （1）一个预处理的工具函数，并非SensorBridge的成员变量；其参数类型是nav_msgs::Odometry::ConstPtr&。
+ * （2）这个需要注意的是TfBridge这个类，他的实例化对象是tf_bridge_，tf_bridge_是SensorBridge的一个成员变量。
+ *     不管什么传感器，都会对每一帧数据的位姿进行估计，而这个历史的位姿数据就以TfBridge的形式存起来。
+ *     这样在使用的时候也可以通过TfBridge查询某一个传感器在某一个历史时刻的位姿。
+ * （3）这里同样也是，代码通过TfBridge查询了一下历史数据，然后把这个作为参数传给了TrajectoryBuilder的AddSensorData来做处理。
+ *     前面我们已经介绍过了，TrajectoryBuilder也是为不同的传感器提供了统一的处理接口。
+ *     我们可以在TrajectoryBuilder的具体实现里再看具体做了什么操作。
+ *     但我们可以合理猜测，比如，里程计的数据是在原来数据的基础上再做一个累加，作为新的值同样保存到TfBridge里。
+ */
 std::unique_ptr<carto::sensor::OdometryData> SensorBridge::ToOdometryData(
     const nav_msgs::Odometry::ConstPtr& msg) {
   const carto::common::Time time = FromRos(msg->header.stamp);
+  /*
+   * 函数tf_bridge_.LookupToTracking()作用是查询一帧里程计数据相对于tracking_frame的变换矩阵，
+   * 它的返回类型为指向::cartographer::transform::Rigid3d的指针，这是一个变换矩阵。
+   * 所以该函数返回的是一个变换矩阵，查询的是某时刻某一帧数据的变换估计，估计要用来做累加。
+   */
   const auto sensor_to_tracking = tf_bridge_.LookupToTracking(
       time, CheckNoLeadingSlash(msg->child_frame_id));
   if (sensor_to_tracking == nullptr) {
