@@ -175,6 +175,8 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
   }
 }
 
+// 把sensor_msgs::LaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型，
+// 并调用SensorBridge::HandleLaserScan()函数来做处理。
 void SensorBridge::HandleLaserScanMessage(
     const std::string& sensor_id, const sensor_msgs::LaserScan::ConstPtr& msg) {
   carto::sensor::PointCloudWithIntensities point_cloud;
@@ -183,6 +185,8 @@ void SensorBridge::HandleLaserScanMessage(
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 
+// 把sensor_msgs::MultiEchoLaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型，
+// 并调用SensorBridge::HandleLaserScan()函数来做处理。
 void SensorBridge::HandleMultiEchoLaserScanMessage(
     const std::string& sensor_id,
     const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg) {
@@ -192,6 +196,8 @@ void SensorBridge::HandleMultiEchoLaserScanMessage(
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 
+// 把sensor_msgs::PointCloud2类型的数据转化成carto::sensor::TimedPointCloud类型，
+// 并调用SensorBridge::HandleRangefinder()函数来做处理。
 void SensorBridge::HandlePointCloud2Message(
     const std::string& sensor_id,
     const sensor_msgs::PointCloud2::ConstPtr& msg) {
@@ -207,6 +213,8 @@ void SensorBridge::HandlePointCloud2Message(
 
 const TfBridge& SensorBridge::tf_bridge() const { return tf_bridge_; }
 
+// 把carto::sensor::PointCloudWithIntensities类型的数据转化成carto::sensor::TimedPointCloud类型，
+// 并调用SensorBridge::HandleRangefinder()函数来做处理。
 void SensorBridge::HandleLaserScan(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id,
@@ -249,6 +257,10 @@ void SensorBridge::HandleLaserScan(
   }
 }
 
+// 处理测距仪数据。
+// HandleRangefinder函数调用了trajectory_builder_->AddSensorData来处理。
+// 所以这里相当于做了一层抽象。我们的Rangefinder可以不一样是激光，也可以是其他类型的传感器，比如Kinect。
+// 这样，以后如果要扩展或修改，我们可以不改之前的代码，而只需要多写一个处理Kinect的代码就可以。这也是封装的好处。
 void SensorBridge::HandleRangefinder(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id, const carto::sensor::TimedPointCloud& ranges) {
