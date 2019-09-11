@@ -30,7 +30,9 @@ namespace cartographer_ros {
 // Top-level options of Cartographer's ROS integration.
 // Cartographer ROS集成的最上层选项
 struct NodeOptions {
-  // map_builder_options 的类型为MapBuilderOptions，这是一个ProtocolBuffer消息类型，用于做串行化的数据结构信息
+  // map_builder_options 的类型为 MapBuilderOptions，这是一个 ProtocolBuffer 消息类型，用于做串行化的数据结构信息，
+  // 消息类型定义在“cartographer/cartographer/mapping/proto/map_builder_options.proto”文件中。
+  // map_builder_options 主要是配置使用2d还是3d构图，以及配置有关 PoseGraph，即 Global SLAM的参数。
   ::cartographer::mapping::proto::MapBuilderOptions map_builder_options;
   std::string map_frame;                 // 地图坐标系名字
   double lookup_transform_timeout_sec;   // 使用tf2进行转换搜素的超时时间的秒数
