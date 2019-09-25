@@ -73,6 +73,7 @@ class Node {
   void RunFinalOptimization();
 
   // Starts the first trajectory with the default topics.
+  // 使用默认的topics名称集合启动第一条trajectory，这里默认的topics名称集合通过函数DefaultSensorTopics()获取。
   void StartTrajectoryWithDefaultTopics(const TrajectoryOptions& options);
 
   // Returns unique SensorIds for multiple input bag files based on
@@ -174,7 +175,7 @@ class Node {
   /**
    * @brief AddTrajectory  增加一条trajectory，并返回其id
    * @param options        跟trajectory相关的参数配置，如tracking_frame，published_frame等等
-   * @param topics         输入的传感器数据的topic名称
+   * @param topics         Cartographer ROS期望获取的传感器数据的topic名称集合
    * @return               增加的trajectory的id
    */
   int AddTrajectory(const TrajectoryOptions& options,
