@@ -402,11 +402,11 @@ int Node::AddTrajectory(const TrajectoryOptions& options,
   const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
       expected_sensor_ids = ComputeExpectedSensorIds(options, topics);  // expected_sensor_ids为我们要订阅的传感器topics名称的集合
   const int trajectory_id =
-      map_builder_bridge_.AddTrajectory(expected_sensor_ids, options);
+      map_builder_bridge_.AddTrajectory(expected_sensor_ids, options);  // 调用 map_builder_bridge_ 中的 AddTrajectory 来处理
   LOG(WARNING) << "trajectory_id: " << trajectory_id;
-  AddExtrapolator(trajectory_id, options);
-  AddSensorSamplers(trajectory_id, options);
-  LaunchSubscribers(options, topics, trajectory_id);
+  AddExtrapolator(trajectory_id, options);            // 添加位姿估计
+  AddSensorSamplers(trajectory_id, options);          // 设置传感器
+  LaunchSubscribers(options, topics, trajectory_id);  // 订阅必要的 Topic 以接收数据
   is_active_trajectory_[trajectory_id] = true;
   for (const auto& sensor_id : expected_sensor_ids) {
     subscribed_topics_.insert(sensor_id.id);
