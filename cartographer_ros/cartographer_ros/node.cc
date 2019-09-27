@@ -161,13 +161,17 @@ Node::~Node() { FinishAllTrajectories(); }
 
 ::ros::NodeHandle* Node::node_handle() { return &node_handle_; }
 
+// Service kSubmapQueryServiceName 绑定的函数句柄，主要工作是根据请求的 trajectory_id 和 submap_index，查询对应的 Submap。
+// 函数有两个参数，
+// 一个参数是一个 ::cartographer_ros_msgs::SubmapQuery::Request 型的变量，对应是请求服务时的输入参数，
+// 另外一个参数是 ::cartographer_ros_msgs::SubmapQuery::Response 型的变量，对应的是服务响应后的返回值。
 bool Node::HandleSubmapQuery(
     ::cartographer_ros_msgs::SubmapQuery::Request& request,
     ::cartographer_ros_msgs::SubmapQuery::Response& response) {
   carto::common::MutexLocker lock(&mutex_);  // 设置互斥锁
-  // map_builder_bridge_在node.h定义。是一个MapBuilderBridge型的变量。
-  // map_builder_bridge_本质上的功能是由map_builder.cc决定的。
-  map_builder_bridge_.HandleSubmapQuery(request, response);
+  // map_builder_bridge_ 在node.h 定义，是一个 MapBuilderBridge 型的变量。
+  // map_builder_bridge_ 本质上的功能是由 map_builder.cc 决定的。
+  map_builder_bridge_.HandleSubmapQuery(request, response);  // 调用了 map_builder_bridge_ 的 HandlesSubmapQuery 来做处理
   return true;
 }
 

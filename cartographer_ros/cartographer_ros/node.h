@@ -135,9 +135,16 @@ class Node {
     std::string topic;
   };
 
+  /**
+   * @brief HandleSubmapQuery  Service kSubmapQueryServiceName 绑定的函数句柄，
+   *                           主要工作是根据请求的 trajectory_id 和 submap_index，查询对应的 Submap。
+   * @return true              查询 Submap 成功
+   *         false             查询 Submap 失败
+   */
   bool HandleSubmapQuery(
       cartographer_ros_msgs::SubmapQuery::Request& request,
       cartographer_ros_msgs::SubmapQuery::Response& response);
+
   /**
    * @brief HandleStartTrajectory  Service kStartTrajectoryServiceName绑定的函数句柄，
    *                               前面一些异常情况的处理，正常情况下调用AddTrajectory函数，增加一条trajectory
@@ -147,6 +154,7 @@ class Node {
   bool HandleStartTrajectory(
       cartographer_ros_msgs::StartTrajectory::Request& request,
       cartographer_ros_msgs::StartTrajectory::Response& response);
+
   /**
    * @brief HandleFinishTrajectory  Service kFinishTrajectoryServiceName绑定的函数句柄，
    *                                根据请求的trajectory_id，结束该trajectory
