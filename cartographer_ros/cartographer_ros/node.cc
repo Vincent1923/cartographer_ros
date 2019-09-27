@@ -100,18 +100,18 @@ Node::Node(
    * 而第二个参数kLatestOnlyPublisherQueueSize是publishing的缓存大小；发布的该Topic即可允许其他节点获取到我们构建的Submap的信息。
    * kSubmapListTopic 等常量定义在cartographer_ros/node_constants.h
    */
-  submap_list_publisher_ =
+  submap_list_publisher_ =                                           // 发布构建的 submap 的list
       node_handle_.advertise<::cartographer_ros_msgs::SubmapList>(   // kLatestOnlyPublisherQueueSize = 1
           kSubmapListTopic, kLatestOnlyPublisherQueueSize);          // kSubmapListTopic[] = "submap_list"
-  trajectory_node_list_publisher_ =
-      node_handle_.advertise<::visualization_msgs::MarkerArray>(
-          kTrajectoryNodeListTopic, kLatestOnlyPublisherQueueSize);  // kTrajectoryNodeListTopic[] = "trajectory_node_list"
-  landmark_poses_list_publisher_ =
-      node_handle_.advertise<::visualization_msgs::MarkerArray>(
-          kLandmarkPosesListTopic, kLatestOnlyPublisherQueueSize);   // kLandmarkPosesListTopic[] = "landmark"
-  constraint_list_publisher_ =
-      node_handle_.advertise<::visualization_msgs::MarkerArray>(
-          kConstraintListTopic, kLatestOnlyPublisherQueueSize);      // kConstraintListTopic[] = "constraint_list"
+  trajectory_node_list_publisher_ =                                  // 发布 trajectory 的list，在rviz上显示
+      node_handle_.advertise<::visualization_msgs::MarkerArray>(     // kTrajectoryNodeListTopic[] = "trajectory_node_list"
+          kTrajectoryNodeListTopic, kLatestOnlyPublisherQueueSize);
+  landmark_poses_list_publisher_ =                                   // 发布 Landmark 的位姿list，在rviz上显示
+      node_handle_.advertise<::visualization_msgs::MarkerArray>(     // kLandmarkPosesListTopic[] = "landmark"
+          kLandmarkPosesListTopic, kLatestOnlyPublisherQueueSize);
+  constraint_list_publisher_ =                                       // 发布 constraint list，在rviz上显示
+      node_handle_.advertise<::visualization_msgs::MarkerArray>(     // kConstraintListTopic[] = "constraint_list"
+          kConstraintListTopic, kLatestOnlyPublisherQueueSize);
 
   /*
    * Service Server
@@ -119,13 +119,13 @@ Node::Node(
    * 第二个参数HandleSubmapQuery是该Service绑定的函数句柄,即当有一个service的request时，由该函数进行response。
    * 注册的第一个service就对应了"submap_query"这个service。这是cartographer_node可以提供的一个service。
    */
-  service_servers_.push_back(node_handle_.advertiseService(
+  service_servers_.push_back(node_handle_.advertiseService(                 // 查询 Submap
       kSubmapQueryServiceName, &Node::HandleSubmapQuery, this));            // kSubmapQueryServiceName[] = "submap_query";
-  service_servers_.push_back(node_handle_.advertiseService(
+  service_servers_.push_back(node_handle_.advertiseService(                 // 开始一段 trajectory
       kStartTrajectoryServiceName, &Node::HandleStartTrajectory, this));    // kStartTrajectoryServiceName[] = "start_trajectory";
-  service_servers_.push_back(node_handle_.advertiseService(
+  service_servers_.push_back(node_handle_.advertiseService(                 // 结束一段 trajectory
       kFinishTrajectoryServiceName, &Node::HandleFinishTrajectory, this));  // kFinishTrajectoryServiceName[] = "finish_trajectory";
-  service_servers_.push_back(node_handle_.advertiseService(
+  service_servers_.push_back(node_handle_.advertiseService(                 // 写状态，把构建的地图数据保存为后缀名为“.pbstream”的文件
       kWriteStateServiceName, &Node::HandleWriteState, this));              // kWriteStateServiceName[] = "write_state";
 
   // 发布了一个跟点云相关的Topic
