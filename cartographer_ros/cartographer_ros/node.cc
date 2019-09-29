@@ -422,8 +422,10 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
   // subscribers_的类型为std::unordered_map<int, std::vector<Subscriber>>，
   // 它把trajectory id和该路径下所有传感器数据订阅的Subscriber绑定在一起。
   /*
-   * （1）subscribers_的类型为std::unordered_map<int, std::vector<Subscriber>>，
-   *     它把trajectory id和该路径下所有传感器数据订阅的Subscriber绑定在一起。
+   * （1）subscribers_ 的类型为 std::unordered_map<int, std::vector<Subscriber>>，
+   *     这是一个 std::unordered_map 的容器，容器的 key 为 int 类型，表示 trajectory 的下标，
+   *     而 std::vector<Subscriber> 表示一条 trajectory 中所有订阅传感器数据的 Subscriber 集合，
+   *     它把 trajectory id 和该路径下所有传感器数据订阅的Subscriber绑定在一起。
    * （2）SubscribeWithHandler()函数主要作用就是订阅一个以topic为名字的Topic，
    *     不同的传感器中的topic这个变量是for循环体中的这一句代码赋值的
    *     const std::string& topic:ComputeRepeatedTopicNames(topics.laser_scan_topic, options.num_laser_scans)，

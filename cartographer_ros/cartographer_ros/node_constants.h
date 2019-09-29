@@ -45,7 +45,16 @@ constexpr double kConstraintPublishPeriodSec = 0.5;
 constexpr int kInfiniteSubscriberQueueSize = 0;
 constexpr int kLatestOnlyPublisherQueueSize = 1;
 
+/**
+ * @brief ComputeRepeatedTopicNames  对于多个 topics，把数字添加到 topic 的名字并返回列表。
+ * @param topic                      订阅的传感器数据的 topic 名称
+ * @param num_topics                 订阅的 topic 类型的传感器数据的数量
+ * @return                           若 topic 上的数据只有一个，则直接返回 topic。
+ *                                   若 topic 上的数据有多个，则根据数量 num_topics，把数字添加到 topic 的名字并返回列表。
+ *                                   以 scan 为例，若数据只有一个，则直接返回 scan。若数据有多个，则返回 (scan_1，scan_2,...) 的列表。
+ */
 // For multiple topics adds numbers to the topic name and returns the list.
+// 对于多个 topics，把数字添加到 topic 的名字并返回列表。
 std::vector<std::string> ComputeRepeatedTopicNames(const std::string& topic,
                                                    int num_topics);
 

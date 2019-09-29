@@ -20,6 +20,8 @@
 
 namespace cartographer_ros {
 
+// 对于多个 topics，把数字添加到 topic 的名字并返回列表。
+// 以 scan 为例，若数据只有一个，则直接返回 scan。若数据有多个，则返回 (scan_1，scan_2,...) 的列表。
 std::vector<std::string> ComputeRepeatedTopicNames(const std::string& topic,
                                                    const int num_topics) {
   CHECK_GE(num_topics, 0);
