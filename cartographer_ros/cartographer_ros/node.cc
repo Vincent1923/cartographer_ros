@@ -535,7 +535,7 @@ bool Node::ValidateTopicNames(
 
 /*
  * （1）返回值类型是cartographer_ros_msgs::StatusResponse,
- *     在/src/cartographer_ros/cartographer_ros_msgs/msg/StatusCode.msg中定义。
+ *     在/src/cartographer_ros/cartographer_ros_msgs/msg/StatusResponse.msg中定义。
  * （2）前面检查了一下是否可以关掉，指定id是否存在，是否已经被Finished了等情况后，
  *     如果一切正常，则停止订阅Topic、清除id及其他与该trajectory相关的量。
  * （3）最后调用map_builder_bridge_中的FinishTrajectory函数。
@@ -581,6 +581,7 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
   }
   CHECK_EQ(subscribers_.erase(trajectory_id), 1);
   CHECK(is_active_trajectory_.at(trajectory_id));
+  // 调用 map_builder_bridge_ 的 FinishTrajectory 函数来结束 id 为 trajectory_id 的路径
   map_builder_bridge_.FinishTrajectory(trajectory_id);
   is_active_trajectory_[trajectory_id] = false;
   const std::string message =
