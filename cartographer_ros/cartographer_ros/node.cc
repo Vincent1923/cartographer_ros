@@ -679,10 +679,18 @@ bool Node::HandleFinishTrajectory(
   return true;
 }
 
+// 写状态，根据请求的request.filename文件名，把构建的地图数据保存为后缀名为“.pbstream”的文件
+/*
+ * cartographer_ros_msgs::WriteState定义：
+ *   string filename
+ *   ---
+ *   cartographer_ros_msgs/StatusResponse status
+ */
 bool Node::HandleWriteState(
     ::cartographer_ros_msgs::WriteState::Request& request,
     ::cartographer_ros_msgs::WriteState::Response& response) {
   carto::common::MutexLocker lock(&mutex_);
+  // 调用了 map_builder_bridge_.SerializeState(request.filename) 函数进行写文件的操作
   if (map_builder_bridge_.SerializeState(request.filename)) {
     response.status.code = cartographer_ros_msgs::StatusCode::OK;
     response.status.message = "State written to '" + request.filename + "'.";

@@ -164,6 +164,13 @@ class Node {
   bool HandleFinishTrajectory(
       cartographer_ros_msgs::FinishTrajectory::Request& request,
       cartographer_ros_msgs::FinishTrajectory::Response& response);
+
+  /**
+   * @brief HandleWriteState  Service kWriteStateServiceName绑定的函数句柄，
+   *                          写状态，根据请求的request.filename文件名，把构建的地图数据保存为后缀名为“.pbstream”的文件
+   * @return true             保存地图数据文件成功
+   *         false            保存地图数据文件失败
+   */
   bool HandleWriteState(cartographer_ros_msgs::WriteState::Request& request,
                         cartographer_ros_msgs::WriteState::Response& response);
   /**
