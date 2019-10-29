@@ -546,7 +546,9 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
 
   // First, check if we can actually finish the trajectory.
   // 首先，检查我们是否能够真正结束trajectory。
-  if (map_builder_bridge_.GetFrozenTrajectoryIds().count(trajectory_id)) {     // 检查id为trajectory_id的trajectory是否为frozen状态
+  // 检查id为 trajectory_id 的 trajectory 是否为 frozen 状态。
+  // 在进行定位 pure localization 时，用来定位的底图的 trajectory_id = 0，此时它的 trajectory 状态就默认为 frozen。
+  if (map_builder_bridge_.GetFrozenTrajectoryIds().count(trajectory_id)) {
     const std::string error =
         "Trajectory " + std::to_string(trajectory_id) + " is frozen.";
     LOG(ERROR) << error;
@@ -554,7 +556,8 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
     status_response.message = error;
     return status_response;
   }
-  if (is_active_trajectory_.count(trajectory_id) == 0) {                       // 检查id为trajectory_id的trajectory是否已经创建
+  // 检查id为 trajectory_id 的 trajectory 是否已经创建
+  if (is_active_trajectory_.count(trajectory_id) == 0) {
     const std::string error =
         "Trajectory " + std::to_string(trajectory_id) + " is not created yet.";
     LOG(ERROR) << error;
@@ -562,7 +565,8 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
     status_response.message = error;
     return status_response;
   }
-  if (!is_active_trajectory_[trajectory_id]) {                                 // 检查id为trajectory_id的trajectory是否已经被Finished
+  // 检查id为 trajectory_id 的 trajectory 是否已经被 Finished
+  if (!is_active_trajectory_[trajectory_id]) {
     const std::string error = "Trajectory " + std::to_string(trajectory_id) +
                               " has already been finished.";
     LOG(ERROR) << error;
@@ -576,10 +580,10 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
   // 关闭此trajectory的subscribers。
   for (auto& entry : subscribers_[trajectory_id]) {
     entry.subscriber.shutdown();
-    subscribed_topics_.erase(entry.topic);
+    subscribed_topics_.erase(entry.topic);  // 删除 subscribed_topics_ 中值为 entry.topic 的元素
     LOG(INFO) << "Shutdown the subscriber of [" << entry.topic << "]";
   }
-  CHECK_EQ(subscribers_.erase(trajectory_id), 1);
+  CHECK_EQ(subscribers_.erase(trajectory_id), 1);  // 删除 subscribers_ 中键值为 trajectory_id 的元素
   CHECK(is_active_trajectory_.at(trajectory_id));
   // 调用 map_builder_bridge_ 的 FinishTrajectory 函数来结束 id 为 trajectory_id 的路径
   map_builder_bridge_.FinishTrajectory(trajectory_id);
