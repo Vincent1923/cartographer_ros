@@ -197,10 +197,13 @@ bool MapBuilderBridge::SerializeState(const std::string& filename) {
 void MapBuilderBridge::HandleSubmapQuery(
     cartographer_ros_msgs::SubmapQuery::Request& request,
     cartographer_ros_msgs::SubmapQuery::Response& response) {
+  // response_proto 是一个 protobuf 数据类型，这里通过这种类型的数据传输 submap 信息。
   cartographer::mapping::proto::SubmapQuery::Response response_proto;
+  // submap_id 的数据类型为一个结构体，对 submap 的 id 进行标识，这是通过 trajectory ID 和 submap 的索引来共同标识的。
   cartographer::mapping::SubmapId submap_id{request.trajectory_id,
                                             request.submap_index};
-  // 调用map_builder_->SubmapToProto(submap_id, &response_proto)这个函数查询信息，结果放到response这个变量中。
+  // 调用map_builder_->SubmapToProto(submap_id, &response_proto)这个函数查询信息，结果放到response_proto这个变量中。
+  // 如果返回的 error 信息为空，则表示查询 submap 成功；如果返回信息不为空，则表示查询出错，找不到查询的 submap。
   const std::string error =
       map_builder_->SubmapToProto(submap_id, &response_proto);
   if (!error.empty()) {
@@ -219,7 +222,7 @@ void MapBuilderBridge::HandleSubmapQuery(
     texture.width = texture_proto.width();
     texture.height = texture_proto.height();
     texture.resolution = texture_proto.resolution();
-    texture.slice_pose = ToGeometryMsgPose(
+    texture.slice_pose = ToGeometryMsgPose(  // ToGeometryMsgPose() 函数把 Rigid3d 类型的数据转换成 geometry_msgs::Pose 类型
         cartographer::transform::ToRigid3(texture_proto.slice_pose()));
   }
   response.status.message = "Success.";
