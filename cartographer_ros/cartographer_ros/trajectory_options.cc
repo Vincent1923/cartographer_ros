@@ -105,6 +105,7 @@ CreateInitialTrajectoryPose(
   return pose;
 }
 
+// 尝试将"msg"转换为"options"，失败时返回false
 bool FromRosMessage(const cartographer_ros_msgs::TrajectoryOptions& msg,
                     TrajectoryOptions* options) {
   options->tracking_frame = msg.tracking_frame;
@@ -126,6 +127,10 @@ bool FromRosMessage(const cartographer_ros_msgs::TrajectoryOptions& msg,
       msg.fixed_frame_pose_sampling_ratio;
   options->imu_sampling_ratio = msg.imu_sampling_ratio;
   options->landmarks_sampling_ratio = msg.landmarks_sampling_ratio;
+  // options->trajectory_builder_options 的类型为 cartographer::mapping::proto::TrajectoryBuilderOptions，
+  // 这是一个 ProtocolBuffer 消息类型。
+  // msg.trajectory_builder_options_proto 是一个 string 类型。
+  // ParseFromString() 函数把 string 类型的消息转换为 ProtocolBuffer 消息类型。
   if (!options->trajectory_builder_options.ParseFromString(
           msg.trajectory_builder_options_proto)) {
     LOG(ERROR) << "Failed to parse protobuf";

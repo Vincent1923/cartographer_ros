@@ -64,7 +64,14 @@ TrajectoryOptions CreateTrajectoryOptions(
     ::cartographer::common::LuaParameterDictionary* lua_parameter_dictionary,
     ::cartographer::common::LuaParameterDictionary* initial_trajectory_pose);
 
+/**
+ * @brief FromRosMessage  尝试将"msg"转换为"options"，失败时返回false
+ * @param msg             用msg的消息类型表示的跟trajectory相关的参数配置
+ * @param options         跟trajectory相关的参数配置，如tracking_frame，published_frame等等
+ * @return
+ */
 // Try to convert 'msg' into 'options'. Returns false on failure.
+// 尝试将"msg"转换为"options"，失败时返回false。
 bool FromRosMessage(const cartographer_ros_msgs::TrajectoryOptions& msg,
                     TrajectoryOptions* options);
 

@@ -605,18 +605,20 @@ bool Node::HandleStartTrajectory(
     ::cartographer_ros_msgs::StartTrajectory::Response& response) {
   carto::common::MutexLocker lock(&mutex_);
   TrajectoryOptions options;
-  if (!FromRosMessage(request.options, &options) ||
-      !ValidateTrajectoryOptions(options)) {                                     // 异常情况的处理
+  // FromRosMessage() 函数将"msg"转换为"options"，成功时返回true，失败时返回false。
+  // ValidateTrajectoryOptions() 函数判断请求的 options 参数配置是否合法。
+  if (!FromRosMessage(request.options, &options) ||           // 异常情况的处理
+      !ValidateTrajectoryOptions(options)) {
     const std::string error = "Invalid trajectory options.";
     LOG(ERROR) << error;
     response.status.code = cartographer_ros_msgs::StatusCode::INVALID_ARGUMENT;
     response.status.message = error;
-  } else if (!ValidateTopicNames(request.topics, options)) {                     // 异常情况的处理
+  } else if (!ValidateTopicNames(request.topics, options)) {  // 异常情况的处理，ValidateTopicNames() 函数判断请求的 topics 名称是否合法。
     const std::string error = "Invalid topics.";
     LOG(ERROR) << error;
     response.status.code = cartographer_ros_msgs::StatusCode::INVALID_ARGUMENT;
     response.status.message = error;
-  } else {                                                                       // 正常情况下调用AddTrajectory函数，增加一条trajectory
+  } else {                                                    // 正常情况下调用AddTrajectory函数，增加一条trajectory
     response.trajectory_id = AddTrajectory(options, request.topics);  // 返回trajectory的id
     response.status.code = cartographer_ros_msgs::StatusCode::OK;
     response.status.message = "Success.";
