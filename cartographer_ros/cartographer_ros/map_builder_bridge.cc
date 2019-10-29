@@ -222,7 +222,9 @@ void MapBuilderBridge::HandleSubmapQuery(
     texture.width = texture_proto.width();
     texture.height = texture_proto.height();
     texture.resolution = texture_proto.resolution();
-    texture.slice_pose = ToGeometryMsgPose(  // ToGeometryMsgPose() 函数把 Rigid3d 类型的数据转换成 geometry_msgs::Pose 类型
+    // ToGeometryMsgPose() 函数把 transform::Rigid3d 类型的数据转换成 geometry_msgs::Pose 类型。
+    // ToRigid3() 函数把 proto::Rigid3d 类型的数据转换成 transform::Rigid3d 类型。
+    texture.slice_pose = ToGeometryMsgPose(
         cartographer::transform::ToRigid3(texture_proto.slice_pose()));
   }
   response.status.message = "Success.";
