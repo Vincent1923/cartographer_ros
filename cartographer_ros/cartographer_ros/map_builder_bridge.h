@@ -103,8 +103,7 @@ class MapBuilderBridge {
 
   std::set<int> GetFrozenTrajectoryIds();
   /**
-   * @brief GetSubmapList  在往kSubmapListTopic这个Topic上发布数据时，
-   *                       被Node::PublishSubmapList调用的，用来获取Submap的列表
+   * @brief GetSubmapList  获取Submap的列表，在往kSubmapListTopic这个Topic上发布数据时，被Node::PublishSubmapList调用的
    * @return               Submap的列表
    */
   cartographer_ros_msgs::SubmapList GetSubmapList();

@@ -247,14 +247,14 @@ std::set<int> MapBuilderBridge::GetFrozenTrajectoryIds() {
 }
 
 /*
- * GetSubmapList()函数是在往kSubmapListTopic这个Topic上发布数据时，
- * 被Node::PublishSubmapList调用的，用来获取Submap的列表。
- * 该函数主要也是通过调用map_builder_->pose_graph()->GetAllSubmapPoses()来获取列表信息。
+ * GetSubmapList()函数主要用来获取 Submap 的列表。
+ * 它是在往kSubmapListTopic这个Topic上发布数据时，被Node::PublishSubmapList调用的。
  */
 cartographer_ros_msgs::SubmapList MapBuilderBridge::GetSubmapList() {
   cartographer_ros_msgs::SubmapList submap_list;
   submap_list.header.stamp = ::ros::Time::now();
   submap_list.header.frame_id = node_options_.map_frame;
+  // 通过调用 map_builder_->pose_graph()->GetAllSubmapPoses() 来获取列表信息
   for (const auto& submap_id_pose :
        map_builder_->pose_graph()->GetAllSubmapPoses()) {
     cartographer_ros_msgs::SubmapEntry submap_entry;
