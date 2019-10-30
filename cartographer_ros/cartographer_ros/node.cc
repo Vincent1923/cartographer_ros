@@ -337,24 +337,25 @@ Node::ComputeExpectedSensorIds(
     const cartographer_ros_msgs::SensorTopics& topics) const {
   using SensorId = cartographer::mapping::TrajectoryBuilderInterface::SensorId;
   using SensorType = SensorId::SensorType;
+  // SensorId会把SensorType（传感器类型）和传感器数据的topic名称（类型为std::string）绑定在一起。
   std::set<SensorId> expected_topics;
   // Subscribe to all laser scan, multi echo laser scan, and point cloud topics.
   // 订阅所有laser scan，multi echo laser scan和point cloud主题。
-  // 函数 ComputeRepeatedTopicNames 定义在node_constants.h
-  // SensorId会把SensorType（传感器类型）和传感器数据的topic名称（类型为std::string）绑定在一起。
   LOG(WARNING) << "Expected topics:";
-  for (const std::string& topic : ComputeRepeatedTopicNames(
+  // 函数 ComputeRepeatedTopicNames 主要作用是对于多个 topics，把数字添加到 topic 的名字并返回列表。
+  // 以 scan 为例，若数据只有一个，则直接返回 scan。若数据有多个，则返回 (scan_1，scan_2,...) 的列表。
+  for (const std::string& topic : ComputeRepeatedTopicNames(     // 把 laser_scan_topic 的 topics 名称跟 SensorType::RANGE 进行绑定
            topics.laser_scan_topic, options.num_laser_scans)) {
     expected_topics.insert(SensorId{SensorType::RANGE, topic});
     std::cout << "topics.laser_scan_topic: " << topic << std::endl;
   }
-  for (const std::string& topic :
+  for (const std::string& topic :                                     // 把 multi_echo_laser_scan_topic 的 topics 名称跟 SensorType::RANGE 进行绑定
        ComputeRepeatedTopicNames(topics.multi_echo_laser_scan_topic,
                                  options.num_multi_echo_laser_scans)) {
     expected_topics.insert(SensorId{SensorType::RANGE, topic});
     std::cout << "topics.multi_echo_laser_scan_topic: " << topic << std::endl;
   }
-  for (const std::string& topic : ComputeRepeatedTopicNames(
+  for (const std::string& topic : ComputeRepeatedTopicNames(        // 把 point_cloud2_topic 的 topics 名称跟 SensorType::RANGE 进行绑定
            topics.point_cloud2_topic, options.num_point_clouds)) {
     expected_topics.insert(SensorId{SensorType::RANGE, topic});
     std::cout << "topics.point_cloud2_topic: " << topic << std::endl;
@@ -362,7 +363,7 @@ Node::ComputeExpectedSensorIds(
   // For 2D SLAM, subscribe to the IMU if we expect it. For 3D SLAM, the IMU is
   // required.
   // 对于2D SLAM，如果我们需要IMU，就订阅。对于3D SLAM，需要订阅IMU。
-  if (node_options_.map_builder_options.use_trajectory_builder_3d() ||
+  if (node_options_.map_builder_options.use_trajectory_builder_3d() ||   // 把 imu_topic 的 topics 名称跟 SensorType::IMU 进行绑定
       (node_options_.map_builder_options.use_trajectory_builder_2d() &&
        options.trajectory_builder_options.trajectory_builder_2d_options()
            .use_imu_data())) {
@@ -371,21 +372,21 @@ Node::ComputeExpectedSensorIds(
   }
   // Odometry is optional.
   // Odometry（里程计数据）是可选的。
-  if (options.use_odometry) {
+  if (options.use_odometry) {  // 把 odometry_topic 的 topics 名称跟 SensorType::ODOMETRY 进行绑定
     expected_topics.insert(
         SensorId{SensorType::ODOMETRY, topics.odometry_topic});
     std::cout << "topics.odometry_topic: " << topics.odometry_topic << std::endl;
   }
   // NavSatFix is optional.
   // NavSatFix 是可选的。
-  if (options.use_nav_sat) {
+  if (options.use_nav_sat) {  // 把 nav_sat_fix_topic 的 topics 名称跟 SensorType::FIXED_FRAME_POSE 进行绑定
     expected_topics.insert(
         SensorId{SensorType::FIXED_FRAME_POSE, topics.nav_sat_fix_topic});
     std::cout << "topics.nav_sat_fix_topic: " << topics.nav_sat_fix_topic << std::endl;
   }
   // Landmark is optional.
   // Landmark 是可选的。
-  if (options.use_landmarks) {
+  if (options.use_landmarks) {  // 把 kLandmarkTopic 的 topics 名称跟 SensorType::LANDMARK 进行绑定
     expected_topics.insert(SensorId{SensorType::LANDMARK, kLandmarkTopic});
     std::cout << "kLandmarkTopic: " << kLandmarkTopic << std::endl;
   }
