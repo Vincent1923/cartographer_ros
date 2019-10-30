@@ -548,7 +548,7 @@ visualization_msgs::MarkerArray MapBuilderBridge::GetConstraintList() {
   return constraint_list;
 }
 
-// 返回指定trajectory_id的SensorBridge变量
+// 根据指定的 trajectory_id，返回对应的 SensorBridge 指针
 SensorBridge* MapBuilderBridge::sensor_bridge(const int trajectory_id) {
   return sensor_bridges_.at(trajectory_id).get();
 }
