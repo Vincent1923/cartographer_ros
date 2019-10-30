@@ -53,9 +53,9 @@ SensorBridge::SensorBridge(
     const std::string& tracking_frame,
     const double lookup_transform_timeout_sec, tf2_ros::Buffer* const tf_buffer,
     carto::mapping::TrajectoryBuilderInterface* const trajectory_builder)
-    : num_subdivisions_per_laser_scan_(num_subdivisions_per_laser_scan),
-      tf_bridge_(tracking_frame, lookup_transform_timeout_sec, tf_buffer),
-      trajectory_builder_(trajectory_builder) {}
+    : num_subdivisions_per_laser_scan_(num_subdivisions_per_laser_scan),    // 初始化 num_subdivisions_per_laser_scan_
+      tf_bridge_(tracking_frame, lookup_transform_timeout_sec, tf_buffer),  // 初始化 tf_bridge_
+      trajectory_builder_(trajectory_builder) {}                            // 初始化 trajectory_builder_
 
 /*
  * （1）一个预处理的工具函数，并非SensorBridge的成员变量；其参数类型是nav_msgs::Odometry::ConstPtr&。

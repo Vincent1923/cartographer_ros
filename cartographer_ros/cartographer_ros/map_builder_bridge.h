@@ -148,7 +148,9 @@ class MapBuilderBridge {
 
   // These are keyed with 'trajectory_id'.
   std::unordered_map<int, TrajectoryOptions> trajectory_options_;
-  std::unordered_map<int, std::unique_ptr<SensorBridge>> sensor_bridges_;  //元素为SensorBridge成员的一个unordered map
+  // sensor_bridges_ 为 SensorBridge 成员的一个 unordered map，
+  // 在函数 MapBuilderBridge::AddTrajectory 中进行初始化。
+  std::unordered_map<int, std::unique_ptr<SensorBridge>> sensor_bridges_;
   std::unordered_map<int, size_t> trajectory_to_highest_marker_id_;
 };
 
