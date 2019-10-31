@@ -142,7 +142,7 @@ class SensorBridge {
                          const std::string& frame_id,
                          const ::cartographer::sensor::TimedPointCloud& ranges);
 
-  const int num_subdivisions_per_laser_scan_;
+  const int num_subdivisions_per_laser_scan_;  // 每个接收到的 (multi-echo) laser scan 中分离出来的点云的数量
   std::map<std::string, cartographer::common::Time>
       sensor_to_previous_subdivision_time_;
   const TfBridge tf_bridge_;
