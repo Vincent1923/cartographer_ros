@@ -50,7 +50,7 @@ using ::cartographer::mapping::SubmapId;
 
 class Node {
  public:
-  explicit Node(double resolution, double publish_period_sec);
+  explicit Node(double resolution, double publish_period_sec);  // 构造函数
   ~Node() {}
 
   Node(const Node&) = delete;
@@ -64,34 +64,38 @@ class Node {
                             cairo_surface_t* surface);
 
   ::ros::NodeHandle node_handle_;
-  const double resolution_;
+  const double resolution_;        // 地图分辨率，默认为0.05m
 
   ::cartographer::common::Mutex mutex_;
+  // Service kSubmapQueryServiceName 的客户端，主要是根据请求的 trajectory_id 和 submap_index，查询对应的 submap
   ::ros::ServiceClient client_ GUARDED_BY(mutex_);
+  // 订阅 Topic kSubmapListTopic 上发布的消息，主要是获取 submap 的 list
   ::ros::Subscriber submap_list_subscriber_ GUARDED_BY(mutex_);
+  // 在 Topic kOccupancyGridTopic 上发布地图消息
   ::ros::Publisher occupancy_grid_publisher_ GUARDED_BY(mutex_);
   std::map<SubmapId, SubmapSlice> submap_slices_ GUARDED_BY(mutex_);
-  ::ros::WallTimer occupancy_grid_publisher_timer_;
+  ::ros::WallTimer occupancy_grid_publisher_timer_;  // 往 Topic kOccupancyGridTopic 上发布消息的定时器
   std::string last_frame_id_;
   ros::Time last_timestamp_;
 };
 
+// 构造函数
 Node::Node(const double resolution, const double publish_period_sec)
     : resolution_(resolution),
-      client_(node_handle_.serviceClient<::cartographer_ros_msgs::SubmapQuery>(
+      client_(node_handle_.serviceClient<::cartographer_ros_msgs::SubmapQuery>(  // 初始化查询 submap 的 client
           kSubmapQueryServiceName)),
-      submap_list_subscriber_(node_handle_.subscribe(
+      submap_list_subscriber_(node_handle_.subscribe(     // 初始化 Subscriber，订阅 Topic kSubmapListTopic，获取 submap 的 list
           kSubmapListTopic, kLatestOnlyPublisherQueueSize,
           boost::function<void(
               const cartographer_ros_msgs::SubmapList::ConstPtr&)>(
               [this](const cartographer_ros_msgs::SubmapList::ConstPtr& msg) {
                 HandleSubmapList(msg);
               }))),
-      occupancy_grid_publisher_(
+      occupancy_grid_publisher_(                                 // 初始化 Publisher，在 Topic kOccupancyGridTopic 上发布地图消息
           node_handle_.advertise<::nav_msgs::OccupancyGrid>(
               kOccupancyGridTopic, kLatestOnlyPublisherQueueSize,
               true /* latched */)),
-      occupancy_grid_publisher_timer_(
+      occupancy_grid_publisher_timer_(                                         // 初始化定时器
           node_handle_.createWallTimer(::ros::WallDuration(publish_period_sec),
                                        &Node::DrawAndPublish, this)) {}
 
