@@ -53,7 +53,13 @@ geometry_msgs::Point ToGeometryMsgPoint(const Eigen::Vector3d& vector3d);
 // Converts ROS message to point cloud. Returns the time when the last point
 // was acquired (different from the ROS timestamp). Timing of points is given in
 // the fourth component of each point relative to `Time`.
-// 将ROS消息转换为点云。返回获取最后一点的时间（与ROS时间戳不同）。相对于“Time”，每个点的第四部分给出了点的计时。
+/**
+ * @brief ToPointCloudWithIntensities  将类型为 sensor_msgs::LaserScan 的激光雷达消息转换为点云，这是通过每一点的测距距离 ranges[i] 进行计算的。
+ *                                     并且返回获取最后一点的时间（与ROS时间戳不同）。相对于“Time”，每个点的第四个元素给出了点的计时。
+ * @param msg                          订阅的类型为 sensor_msgs::LaserScan 的激光雷达数据
+ * @return                             数据类型为 cartographer::sensor::PointCloudWithIntensities 的点云数据，包含3D位置，时间，以及 intensities。
+ *                                     数据类型为 cartographer::common::Time 的时间信息，这是获取的一帧雷达数据 msg 中最后一点的时间。
+ */
 std::tuple<::cartographer::sensor::PointCloudWithIntensities,
            ::cartographer::common::Time>
 ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg);

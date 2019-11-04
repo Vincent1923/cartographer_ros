@@ -171,6 +171,8 @@ sensor_msgs::PointCloud2 ToPointCloud2Message(
   return msg;
 }
 
+// 将类型为 sensor_msgs::LaserScan 的激光雷达消息转换为点云，这是通过每一点的测距距离 ranges[i] 进行计算的。
+// 并且返回获取最后一点的时间（与ROS时间戳不同）。相对于“Time”，每个点的第四个元素给出了点的计时。
 std::tuple<::cartographer::sensor::PointCloudWithIntensities,
            ::cartographer::common::Time>
 ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg) {
