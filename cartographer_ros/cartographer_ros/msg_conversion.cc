@@ -101,23 +101,25 @@ float GetFirstEcho(const sensor_msgs::LaserEcho& echo) {
 template <typename LaserMessageType>
 std::tuple<PointCloudWithIntensities, ::cartographer::common::Time>
 LaserScanToPointCloudWithIntensities(const LaserMessageType& msg) {
-  CHECK_GE(msg.range_min, 0.f);
-  CHECK_GE(msg.range_max, msg.range_min);
+  CHECK_GE(msg.range_min, 0.f);            // 检查 msg.range_min 是否大于0
+  CHECK_GE(msg.range_max, msg.range_min);  // 检查 msg.range_max 是否大于 msg.range_min
   if (msg.angle_increment > 0.f) {
-    CHECK_GT(msg.angle_max, msg.angle_min);
+    CHECK_GT(msg.angle_max, msg.angle_min);  // 若每次扫描的角度增量为正数，则检查 msg.angle_max 是否大于 msg.angle_min
   } else {
-    CHECK_GT(msg.angle_min, msg.angle_max);
+    CHECK_GT(msg.angle_min, msg.angle_max);  // 若每次扫描的角度增量为负数，则检查 msg.angle_min 是否大于 msg.angle_max
   }
   PointCloudWithIntensities point_cloud;
-  float angle = msg.angle_min;
-  for (size_t i = 0; i < msg.ranges.size(); ++i) {
+  float angle = msg.angle_min;  // angle 表示每次扫描的角度，范围为 angle_min 到 angle_max，每次增加 angle_increment
+  for (size_t i = 0; i < msg.ranges.size(); ++i) {  // 遍历每一帧扫描的数据
     const auto& echoes = msg.ranges[i];
+    // 如果 msg 类型为 sensor_msgs::LaserScan，则函数 HasEcho(echoes) 直接返回 true，函数 GetFirstEcho(echoes) 直接返回 echoes
     if (HasEcho(echoes)) {
-      const float first_echo = GetFirstEcho(echoes);
+      const float first_echo = GetFirstEcho(echoes);  // first_echo 为每次扫描的测距数据
       if (msg.range_min <= first_echo && first_echo <= msg.range_max) {
-        const Eigen::AngleAxisf rotation(angle, Eigen::Vector3f::UnitZ());
+        const Eigen::AngleAxisf rotation(angle, Eigen::Vector3f::UnitZ());  // 定义旋转角度为 angle 的旋转向量
         Eigen::Vector4f point;
-        point << rotation * (first_echo * Eigen::Vector3f::UnitX()),
+        // point 的前三个元素表示扫描点 first_echo 相对于 laser 的3D坐标，第四个元素为扫描点 first_echo 相对于这一帧扫描的第一个扫描点的时间
+        point << rotation * (first_echo * Eigen::Vector3f::UnitX()),  // 计算坐标点(first_echo, 0, 0) 经过 rotation 旋转后的坐标
             i * msg.time_increment;
         point_cloud.points.push_back(point);
         if (msg.intensities.size() > 0) {
@@ -130,11 +132,11 @@ LaserScanToPointCloudWithIntensities(const LaserMessageType& msg) {
         }
       }
     }
-    angle += msg.angle_increment;
+    angle += msg.angle_increment;  // 每次扫描增加的角度
   }
   ::cartographer::common::Time timestamp = FromRos(msg.header.stamp);
   if (!point_cloud.points.empty()) {
-    const double duration = point_cloud.points.back()[3];
+    const double duration = point_cloud.points.back()[3];  // duration 为一帧最后一个扫描点的时间
     timestamp += cartographer::common::FromSeconds(duration);
     for (Eigen::Vector4f& point : point_cloud.points) {
       point[3] -= duration;
