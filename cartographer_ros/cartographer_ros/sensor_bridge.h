@@ -89,15 +89,17 @@ class SensorBridge {
   void HandleImuMessage(const std::string& sensor_id,
                         const sensor_msgs::Imu::ConstPtr& msg);
   /**
-   * @brief HandleLaserScanMessage  把sensor_msgs::LaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型
-   * @param sensor_id               sensor_msgs::LaserScan消息的topic名字
-   * @param msg                     sensor_msgs::LaserScan数据
+   * @brief HandleLaserScanMessage  处理数据类型为 sensor_msgs::LaserScan 的 激光雷达数据，
+   *                                把 sensor_msgs::LaserScan 类型的数据转化成 carto::sensor::PointCloudWithIntensities 类型
+   * @param sensor_id               sensor_msgs::LaserScan 消息的 topic 名字
+   * @param msg                     sensor_msgs::LaserScan 数据
    * @return
    */
   void HandleLaserScanMessage(const std::string& sensor_id,
                               const sensor_msgs::LaserScan::ConstPtr& msg);
   /**
-   * @brief HandleMultiEchoLaserScanMessage  把sensor_msgs::MultiEchoLaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型
+   * @brief HandleMultiEchoLaserScanMessage  处理数据类型为 sensor_msgs::MultiEchoLaserScan 的激光雷达数据，
+   *                                         把 sensor_msgs::MultiEchoLaserScan 类型的数据转化成 carto::sensor::PointCloudWithIntensities 类型
    * @param sensor_id                        sensor_msgs::MultiEchoLaserScan消息的topic名字
    * @param msg                              sensor_msgs::MultiEchoLaserScan数据
    * @return

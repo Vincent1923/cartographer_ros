@@ -175,6 +175,7 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
   }
 }
 
+// 处理数据类型为 sensor_msgs::LaserScan 的 激光雷达数据，
 // 把sensor_msgs::LaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型，
 // 并调用SensorBridge::HandleLaserScan()函数来做处理。
 void SensorBridge::HandleLaserScanMessage(
@@ -185,14 +186,15 @@ void SensorBridge::HandleLaserScanMessage(
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 
+// 处理数据类型为 sensor_msgs::MultiEchoLaserScan 的激光雷达数据，
 // 把sensor_msgs::MultiEchoLaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型，
 // 并调用SensorBridge::HandleLaserScan()函数来做处理。
 void SensorBridge::HandleMultiEchoLaserScanMessage(
     const std::string& sensor_id,
     const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg) {
-  carto::sensor::PointCloudWithIntensities point_cloud;
+  carto::sensor::PointCloudWithIntensities point_cloud;  // 点云数据，包含3D位置，时间，以及 intensities
   carto::common::Time time;
-  std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
+  std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);  // 将ROS消息转换为点云
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 
