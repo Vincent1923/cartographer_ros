@@ -223,8 +223,13 @@ void SensorBridge::HandlePointCloud2Message(
 
 const TfBridge& SensorBridge::tf_bridge() const { return tf_bridge_; }
 
-// 把carto::sensor::PointCloudWithIntensities类型的数据转化成carto::sensor::TimedPointCloud类型，
-// 并调用SensorBridge::HandleRangefinder()函数来做处理。
+/*
+ * （1）根据 num_subdivisions_per_laser_scan_ 的大小，对一帧点云数据 points 进行划分。
+ *     例如，若 num_subdivisions_per_laser_scan_ = 1，则不进行划分；
+ *     若 num_subdivisions_per_laser_scan_ = 2，则把点云数据划分为两等份，后面以此类推。
+ * （2）把 carto::sensor::PointCloudWithIntensities 类型的数据转化成 carto::sensor::TimedPointCloud 类型，
+ *     并调用SensorBridge::HandleRangefinder()函数来做处理。
+ */
 void SensorBridge::HandleLaserScan(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id,
@@ -232,21 +237,27 @@ void SensorBridge::HandleLaserScan(
   if (points.points.empty()) {
     return;
   }
-  CHECK_LE(points.points.back()[3], 0);
+  CHECK_LE(points.points.back()[3], 0);  // 检查一帧点云中最后一个点的时间是否小于或等于0
   // TODO(gaschler): Use per-point time instead of subdivisions.
+  // 对于 sensor_msgs::LaserScan 消息，num_subdivisions_per_laser_scan_ = 1
   for (int i = 0; i != num_subdivisions_per_laser_scan_; ++i) {
-    const size_t start_index =
+    const size_t start_index =  // 对于 sensor_msgs::LaserScan 消息，start_index = 0
         points.points.size() * i / num_subdivisions_per_laser_scan_;
-    const size_t end_index =
+    const size_t end_index =  // 对于 sensor_msgs::LaserScan 消息，end_index = 360，等于 range.size()
         points.points.size() * (i + 1) / num_subdivisions_per_laser_scan_;
+    // subdivision 表示经过划分后的包含时间信息的一帧点云数据。
+    // 若 num_subdivisions_per_laser_scan_ = 1，则 subdivision 为输入的一帧点云数据。
     carto::sensor::TimedPointCloud subdivision(
         points.points.begin() + start_index, points.points.begin() + end_index);
     if (start_index == end_index) {
       continue;
     }
+    // time_to_subdivision_end 表示经过划分后的点云 subdivision 的最后一个点的时间，这个时间是相对于一帧点云的最后一个点的相对时间。
+    // 若 num_subdivisions_per_laser_scan_ = 1，则 time_to_subdivision_end = 0
     const double time_to_subdivision_end = subdivision.back()[3];
     // `subdivision_time` is the end of the measurement so sensor::Collator will
     // send all other sensor data first.
+    // subdivision_time 表示 subdivision 中最后一个点的时间，这个时间为实际时间，不是相对时间
     const carto::common::Time subdivision_time =
         time + carto::common::FromSeconds(time_to_subdivision_end);
     auto it = sensor_to_previous_subdivision_time_.find(sensor_id);
@@ -259,10 +270,11 @@ void SensorBridge::HandleLaserScan(
       continue;
     }
     sensor_to_previous_subdivision_time_[sensor_id] = subdivision_time;
+    // 把 subdivision 的最后一个点的时间变成0，其它点的时间换算成相对于 subdivision 的最后一个点的相对时间。
     for (Eigen::Vector4f& point : subdivision) {
       point[3] -= time_to_subdivision_end;
     }
-    CHECK_EQ(subdivision.back()[3], 0);
+    CHECK_EQ(subdivision.back()[3], 0);  // 检查点云 subdivision 的最后一个点的时间是否为0
     HandleRangefinder(sensor_id, subdivision_time, frame_id, subdivision);
   }
 }

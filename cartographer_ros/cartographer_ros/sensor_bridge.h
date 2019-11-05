@@ -120,11 +120,12 @@ class SensorBridge {
 
  private:
   /**
-   * @brief HandleLaserScan  把carto::sensor::PointCloudWithIntensities类型的数据转化成carto::sensor::TimedPointCloud类型
-   * @param sensor_id        LaserScan消息的topic名字
-   * @param start_time
-   * @param frame_id         LaserScan消息的frame_id
-   * @param points           LaserScan消息转化成carto::sensor::PointCloudWithIntensities类型后的数据
+   * @brief HandleLaserScan  根据 num_subdivisions_per_laser_scan_ 的大小，对一帧点云数据 points 进行划分。
+   *                         把 carto::sensor::PointCloudWithIntensities 类型的数据转化成 carto::sensor::TimedPointCloud 类型
+   * @param sensor_id        LaserScan 消息的 topic 名字
+   * @param start_time       一帧点云数据 points 的最后一个点的时间
+   * @param frame_id         LaserScan 消息的 frame_id
+   * @param points           LaserScan 消息转化成 carto::sensor::PointCloudWithIntensities 类型后的数据，输入的一帧点云数据
    * @return
    */
   void HandleLaserScan(
