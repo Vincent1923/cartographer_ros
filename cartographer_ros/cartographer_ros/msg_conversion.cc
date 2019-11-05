@@ -98,6 +98,16 @@ float GetFirstEcho(const sensor_msgs::LaserEcho& echo) {
 }
 
 // For sensor_msgs::LaserScan and sensor_msgs::MultiEchoLaserScan.
+/*
+  * （1）将 sensor_msgs::LaserScan 或 sensor_msgs::MultiEchoLaserScan 的激光雷达消息转换为点云，
+  *     这是通过每一点的测距距离 ranges[i] 进行计算的。并且返回获取最后一点的时间（与ROS时间戳不同）。
+  *     相对于“Time”，每个点的第四个元素给出了点的计时。
+  * （2）返回的 PointCloudWithIntensities 数据类型表示点云信息，包含3D位置，时间，以及 intensities。
+  *     其中 point 表示点云数据，前三个元素为3D坐标，第四个元素表示时间，这是相对于获取最后一个点的时间。
+  *     从第一个点开始，每一个点的时间逐渐增加，而最后一个点的第四个元素为0，所以前面的点的时间都为负数。
+  *     而 intensities 表示测距点的强度。
+  * （3）cartographer::common::Time 表示获取最后一个测距点的时间。
+  */
 template <typename LaserMessageType>
 std::tuple<PointCloudWithIntensities, ::cartographer::common::Time>
 LaserScanToPointCloudWithIntensities(const LaserMessageType& msg) {
@@ -108,7 +118,7 @@ LaserScanToPointCloudWithIntensities(const LaserMessageType& msg) {
   } else {
     CHECK_GT(msg.angle_min, msg.angle_max);  // 若每次扫描的角度增量为负数，则检查 msg.angle_min 是否大于 msg.angle_max
   }
-  PointCloudWithIntensities point_cloud;
+  PointCloudWithIntensities point_cloud;  // 返回的带有 intensities 的点云，point_cloud.point 的前三个元素表示3D坐标，第四个元素表示时间
   float angle = msg.angle_min;  // angle 表示每次扫描的角度，范围为 angle_min 到 angle_max，每次增加 angle_increment
   for (size_t i = 0; i < msg.ranges.size(); ++i) {  // 遍历每一帧扫描的数据
     const auto& echoes = msg.ranges[i];
@@ -134,10 +144,12 @@ LaserScanToPointCloudWithIntensities(const LaserMessageType& msg) {
     }
     angle += msg.angle_increment;  // 每次扫描增加的角度
   }
-  ::cartographer::common::Time timestamp = FromRos(msg.header.stamp);
+  ::cartographer::common::Time timestamp = FromRos(msg.header.stamp);  // 返回的时间，表示一帧雷达消息 msg 中获取最后一个测距点的时间
   if (!point_cloud.points.empty()) {
     const double duration = point_cloud.points.back()[3];  // duration 为一帧最后一个扫描点的时间
     timestamp += cartographer::common::FromSeconds(duration);
+    // point_cloud.points 表示一帧点云数据，每一个点的第四个元素表示时间，这是相对于获取最后一个点的时间。
+    // 从第一个点开始，每一个点的时间逐渐增加，而最后一个点的第四个元素为0，所以前面的点的时间都为负数。
     for (Eigen::Vector4f& point : point_cloud.points) {
       point[3] -= duration;
     }
@@ -171,8 +183,15 @@ sensor_msgs::PointCloud2 ToPointCloud2Message(
   return msg;
 }
 
-// 将类型为 sensor_msgs::LaserScan 的激光雷达消息转换为点云，这是通过每一点的测距距离 ranges[i] 进行计算的。
-// 并且返回获取最后一点的时间（与ROS时间戳不同）。相对于“Time”，每个点的第四个元素给出了点的计时。
+/*
+  * （1）将类型为 sensor_msgs::LaserScan 的激光雷达消息转换为点云，这是通过每一点的测距距离 ranges[i] 进行计算的。
+  *     并且返回获取最后一点的时间（与ROS时间戳不同）。相对于“Time”，每个点的第四个元素给出了点的计时。
+  * （2）返回的 cartographer::sensor::PointCloudWithIntensities 数据类型表示点云信息，包含3D位置，时间，以及 intensities。
+  *     其中 point 表示点云数据，前三个元素为3D坐标，第四个元素表示时间，这是相对于获取最后一个点的时间。
+  *     从第一个点开始，每一个点的时间逐渐增加，而最后一个点的第四个元素为0，所以前面的点的时间都为负数。
+  *     而 intensities 表示测距点的强度。
+  * （3）cartographer::common::Time 表示获取最后一个测距点的时间。
+  */
 std::tuple<::cartographer::sensor::PointCloudWithIntensities,
            ::cartographer::common::Time>
 ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg) {

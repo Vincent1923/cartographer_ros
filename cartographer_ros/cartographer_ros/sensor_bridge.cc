@@ -181,8 +181,16 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
 void SensorBridge::HandleLaserScanMessage(
     const std::string& sensor_id, const sensor_msgs::LaserScan::ConstPtr& msg) {
   carto::sensor::PointCloudWithIntensities point_cloud;  // 点云数据，包含3D位置，时间，以及 intensities
-  carto::common::Time time;
-  std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);  // 将ROS消息转换为点云
+  carto::common::Time time;  // 一帧雷达消息 msg 中获取最后一个测距点的时间
+  /*
+   * （1）ToPointCloudWithIntensities() 函数将ROS消息转换为点云，并且返回一帧 scan 数据中最后一个测距点的时间。
+   * （2）point_cloud 表示点云信息，包含3D位置，时间，以及 intensities。
+   *     point_cloud.point 表示点云数据，前三个元素为3D坐标，第四个元素表示时间，这是相对于获取最后一个点的时间。
+   *     从第一个点开始，每一个点的时间逐渐增加，而最后一个点的第四个元素为0，所以前面的点的时间都为负数。
+   *     point_cloud.intensities 表示测距点的强度。
+   * （3）time 表示获取最后一个测距点的时间。
+   */
+  std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 
