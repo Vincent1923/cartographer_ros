@@ -134,10 +134,10 @@ class SensorBridge {
       const ::cartographer::sensor::PointCloudWithIntensities& points);
   /**
    * @brief HandleRangefinder  处理测距仪数据
-   * @param sensor_id          测距仪消息的topic名字
-   * @param time
-   * @param frame_id           测距仪消息的frame_id
-   * @param ranges             测距仪数据
+   * @param sensor_id          测距仪消息的 topic 名字
+   * @param time               输入的一帧点云数据 ranges 的最后一个点的时间
+   * @param frame_id           测距仪消息的 frame_id
+   * @param ranges             输入的一帧点云数据
    * @return
    */
   void HandleRangefinder(const std::string& sensor_id,

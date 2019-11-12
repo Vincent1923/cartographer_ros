@@ -280,15 +280,21 @@ void SensorBridge::HandleLaserScan(
 }
 
 // 处理测距仪数据。
-// HandleRangefinder函数调用了trajectory_builder_->AddSensorData来处理。
-// 所以这里相当于做了一层抽象。我们的Rangefinder可以不一样是激光，也可以是其他类型的传感器，比如Kinect。
-// 这样，以后如果要扩展或修改，我们可以不改之前的代码，而只需要多写一个处理Kinect的代码就可以。这也是封装的好处。
+// HandleRangefinder 函数调用了 trajectory_builder_->AddSensorData 来处理。
+// 所以这里相当于做了一层抽象。我们的 Rangefinder 可以不一样是激光，也可以是其他类型的传感器，比如 Kinect。
+// 这样，以后如果要扩展或修改，我们可以不改之前的代码，而只需要多写一个处理 Kinect 的代码就可以。这也是封装的好处。
 void SensorBridge::HandleRangefinder(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id, const carto::sensor::TimedPointCloud& ranges) {
+  // 获取 frame_id 相对于 tracking_frame_ 的变换矩阵，这是在 tracking_frame_ 的坐标系下的，
+  // 即获取 frame_id 在 tracking_frame_ 坐标系下的位姿。
+  // 这里的 frame_id 一般为 “laser_link”，而 tracking_frame_ 一般为 “base_link” 或 “base_footprint”，
+  // 即获取激光雷达相对于机器人中心的位姿。
   const auto sensor_to_tracking =
       tf_bridge_.LookupToTracking(time, CheckNoLeadingSlash(frame_id));
   if (sensor_to_tracking != nullptr) {
+    // 调用 trajectory_builder_->AddSensorData 函数对点云数据进行处理。
+    // TransformTimedPointCloud 函数把 frame_id 坐标系下的点云数据 ranges，变换到 tracking_frame_ 坐标系下。
     trajectory_builder_->AddSensorData(
         sensor_id, carto::sensor::TimedPointCloudData{
                        time, sensor_to_tracking->translation().cast<float>(),
