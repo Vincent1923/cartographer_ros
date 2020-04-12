@@ -248,6 +248,9 @@ class Node {
   tf2_ros::TransformBroadcaster tf_broadcaster_;
 
   cartographer::common::Mutex mutex_;
+  // 变量带保护锁声明，GUARDED_BY(mutex_) 表示 map_builder_bridge_ 变量被 mutex_ 保护，
+  // 在访问变量 map_builder_bridge_ 时会检查是否占有 mutex_。
+  // guarded_by 属性是为了保证线程安全，使用该属性后，线程要使用相应变量，必须先锁定 mutex_。
   MapBuilderBridge map_builder_bridge_ GUARDED_BY(mutex_);
 
   ::ros::NodeHandle node_handle_;
