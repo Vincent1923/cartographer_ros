@@ -149,6 +149,8 @@ class SensorBridge {
   std::map<std::string, cartographer::common::Time>
       sensor_to_previous_subdivision_time_;
   const TfBridge tf_bridge_;
+  // 这里的 trajectory_builder_ 主要负责处理各种传感器消息，通过调用这个成员类的虚函数 AddSensorData() 进行处理，
+  // 而 CollatedTrajectoryBuilder 继承了这个类并实现了 AddSensorData() 函数。
   ::cartographer::mapping::TrajectoryBuilderInterface* const
       trajectory_builder_;
 
