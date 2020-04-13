@@ -175,8 +175,8 @@ bool Node::HandleSubmapQuery(
   return true;
 }
 
-// 调用map_builder_bridge_.GetSubmapList()函数获取submap的list，
-// 然后用ros的publish函数向Topic上广播这个消息。
+// 调用 map_builder_bridge_.GetSubmapList() 函数获取 submap 的 list，然后用 ros 的 publish 函数向 Topic 上广播这个消息。
+// 发布的 topic 名字为 kSubmapListTopic[] = "submap_list"，在节点 cartographer_occupancy_grid_node 上进行接受。
 void Node::PublishSubmapList(const ::ros::WallTimerEvent& unused_timer_event) {
   carto::common::MutexLocker lock(&mutex_);
   submap_list_publisher_.publish(map_builder_bridge_.GetSubmapList());

@@ -247,8 +247,9 @@ std::set<int> MapBuilderBridge::GetFrozenTrajectoryIds() {
 }
 
 /*
- * GetSubmapList()函数主要用来获取 Submap 的列表。
- * 它是在往kSubmapListTopic这个Topic上发布数据时，被Node::PublishSubmapList调用的。
+ * GetSubmapList() 函数主要用来获取 Submap 的列表。
+ * 它是在往 kSubmapListTopic = "submap_list" 这个 Topic 上发布数据时，被 Node::PublishSubmapList 调用的，
+ * 发布的 submap 列表信息在节点 cartographer_occupancy_grid_node 上进行接受。
  */
 cartographer_ros_msgs::SubmapList MapBuilderBridge::GetSubmapList() {
   cartographer_ros_msgs::SubmapList submap_list;
@@ -268,36 +269,44 @@ cartographer_ros_msgs::SubmapList MapBuilderBridge::GetSubmapList() {
 }
 
 /*
- * GetTrajectoryStates函数用来返回一个TrajectoryStates变量组成的unordered_map这个容器。
- * 这里稍微注意一下，Unordered Map跟我们程序里MapBuilder里的map不是同一个概念。
- * Unordered Map只是c++中的一种container。
+ * GetTrajectoryStates 函数用来返回一个 TrajectoryStates 变量组成的 unordered_map 这个容器。
+ * 它是在往 kScanMatchedPointCloudTopic[] = "scan_matched_points2" 这个 Topic 上发布数据时，
+ * 被 Node::PublishTrajectoryStates 调用的。发布的 topic 是在 rviz 上看到的绿色的雷达信息。
+ * 这里稍微注意一下，Unordered Map 跟我们程序里 MapBuilder 里的 map 不是同一个概念。
+ * Unordered Map 只是 c++ 中的一种 container。
  */
 std::unordered_map<int, MapBuilderBridge::TrajectoryState>
 MapBuilderBridge::GetTrajectoryStates() {
   std::unordered_map<int, TrajectoryState> trajectory_states;  // 变量用来存返回结果
-  // 一个循环，依次取出来TrajectoryState；这里以SensorBridge为索引来取，还不知道为什么
+  // 一个循环，依次取出来 TrajectoryState；这里以 SensorBridge 为索引来取，还不知道为什么
   for (const auto& entry : sensor_bridges_) {
     const int trajectory_id = entry.first;
     const SensorBridge& sensor_bridge = *entry.second;
 
-    // TrajectoryState结构体中的第一个成员LocalSlamData
+    // TrajectoryState 结构体中的第一个成员 local_slam_data，注意这是一个智能指针
     std::shared_ptr<const TrajectoryState::LocalSlamData> local_slam_data;
     {
       cartographer::common::MutexLocker lock(&mutex_);
-      if (trajectory_state_data_.count(trajectory_id) == 0) {
+      // 检查 trajectory_state_data_ 容器中时候是否存在 trajectory_id 的路径
+      if (trajectory_state_data_.count(trajectory_id) == 0) {  // 不存在直接跳过这次循环
         continue;
       }
-      local_slam_data = trajectory_state_data_.at(trajectory_id);
+      // 存在则获取路径 trajectory_id 的 local_slam_data 数据
+      local_slam_data = trajectory_state_data_.at(trajectory_id); 
     }
 
     // Make sure there is a trajectory with 'trajectory_id'.
     CHECK_EQ(trajectory_options_.count(trajectory_id), 1);
     /*
-     * 第trajectory_id个TrajectoryState存入返回变量中：
-     * （1）第二个成员变量std::shared_ptr<const LocalSlamData> local_slam_data
-     *     是通过map_builder_->pose_graph()->GetLocalToGlobalTransform(trajectory_id)获取的。
-     * （2）第三个成员变量std::unique_ptr<cartographer::transform::Rigid3d> published_to_tracking
-     *     是通过sensor_bridge.tf_bridge().LookupToTracking获取的。
+     * 第 trajectory_id 个 TrajectoryState 存入返回变量中：
+     * （1）第一个成员变量 std::shared_ptr<const LocalSlamData> local_slam_data 为 local SLAM 的数据，
+     *     是通过上面的 trajectory_state_data_.at(trajectory_id) 获取的。
+     * （2）第二个成员变量 cartographer::transform::Rigid3d local_to_map 为 submap 到 global map 的坐标变换关系，
+     *     是通过 map_builder_->pose_graph()->GetLocalToGlobalTransform(trajectory_id) 获取的。
+     * （3）第三个成员变量 std::unique_ptr<cartographer::transform::Rigid3d> published_to_tracking
+     *     是通过 sensor_bridge.tf_bridge().LookupToTracking() 获取的。
+     * （4）第四个成员变量 TrajectoryOptions trajectory_options 为路径配置参数，
+     *     是通过 trajectory_options_[trajectory_id] 获取的。
      */
     trajectory_states[trajectory_id] = {
         local_slam_data,
