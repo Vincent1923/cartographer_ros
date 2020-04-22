@@ -243,6 +243,7 @@ class Node {
   cartographer_ros_msgs::StatusResponse FinishTrajectoryUnderLock(
       int trajectory_id) REQUIRES(mutex_);
 
+/*************************************** 成员变量 ***************************************/
   const NodeOptions node_options_;
 
   tf2_ros::TransformBroadcaster tf_broadcaster_;
@@ -253,6 +254,7 @@ class Node {
   // guarded_by 属性是为了保证线程安全，使用该属性后，线程要使用相应变量，必须先锁定 mutex_。
   MapBuilderBridge map_builder_bridge_ GUARDED_BY(mutex_);
 
+  // Publishers，ServiceServers
   ::ros::NodeHandle node_handle_;
   ::ros::Publisher submap_list_publisher_;
   ::ros::Publisher trajectory_node_list_publisher_;
@@ -282,11 +284,12 @@ class Node {
   };
 
   // These are keyed with 'trajectory_id'.
-  std::map<int, ::cartographer::mapping::PoseExtrapolator> extrapolators_;
+  // 以下的变量都以“trajectory_id”为键，即变量都跟“trajectory_id”关联
+  std::map<int, ::cartographer::mapping::PoseExtrapolator> extrapolators_;  // 对 IMU、odom 数据进行融合，估计机器人的实时位姿
   std::unordered_map<int, TrajectorySensorSamplers> sensor_samplers_;
-  std::unordered_map<int, std::vector<Subscriber>> subscribers_;            // subscribers_把trajectory id和该路径下所有传感器数据订阅的Subscriber绑定在一起
-  std::unordered_set<std::string> subscribed_topics_;                       // 订阅的传感器topic名称的集合
-  std::unordered_map<int, bool> is_active_trajectory_ GUARDED_BY(mutex_);
+  std::unordered_map<int, std::vector<Subscriber>> subscribers_;            // 路径 trajectory_id 下的 Subscriber
+  std::unordered_set<std::string> subscribed_topics_;                       // 订阅的传感器 topic 名称的集合
+  std::unordered_map<int, bool> is_active_trajectory_ GUARDED_BY(mutex_);   // 路径 trajectory_id 是否为激活状态
 
   // We have to keep the timer handles of ::ros::WallTimers around, otherwise
   // they do not fire.

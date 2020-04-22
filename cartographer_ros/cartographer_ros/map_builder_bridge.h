@@ -134,23 +134,23 @@ class MapBuilderBridge {
                                 TrajectoryBuilderInterface::InsertionResult>
           insertion_result) EXCLUDES(mutex_);
 
-  // 成员变量
+/*************************************** 成员变量 ***************************************/
   cartographer::common::Mutex mutex_;
-  const NodeOptions node_options_;
-  // 几个Unordered map的container
+  const NodeOptions node_options_;  // Cartographer ROS 的配置项，包含 map_builder_options 以及一些周期
   std::unordered_map<int, std::shared_ptr<const TrajectoryState::LocalSlamData>>
       trajectory_state_data_ GUARDED_BY(mutex_);
   std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder_;
   tf2_ros::Buffer* const tf_buffer_;
 
-  // 跟landmark相关，其中std::string变量表征landmark的ID
+  // 跟 landmark 相关，其中 std::string 变量表征 landmark 的 ID
   std::unordered_map<std::string /* landmark ID */, int> landmark_to_index_;
 
   // These are keyed with 'trajectory_id'.
-  std::unordered_map<int, TrajectoryOptions> trajectory_options_;
+  // 以下的变量都以“trajectory_id”为键，即变量都跟“trajectory_id”关联
+  std::unordered_map<int, TrajectoryOptions> trajectory_options_;  // 路径 trajectory_id 的配置项
   // sensor_bridges_ 为 SensorBridge 成员的一个 unordered map，
   // 在函数 MapBuilderBridge::AddTrajectory 中进行初始化。
-  std::unordered_map<int, std::unique_ptr<SensorBridge>> sensor_bridges_;
+  std::unordered_map<int, std::unique_ptr<SensorBridge>> sensor_bridges_;  // 处理路径 trajectory_id 下的传感器数据
   std::unordered_map<int, size_t> trajectory_to_highest_marker_id_;
 };
 
