@@ -55,6 +55,12 @@ namespace cartographer_ros {
 // Wires up ROS topics to SLAM.
 class Node {
  public:
+  /**
+   * @brief Node  构造函数
+   * @param node_options  node 对象的各种配置参数，在 "node_main.cc" 中由函数 Run 中从配置文件中获取
+   * @param map_builder   Cartographer 用于建图的对象
+   * @param tf_buffer     ROS 系统中常用的坐标变换库 tf2 的缓存对象
+   */
   Node(const NodeOptions& node_options,
        std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
        tf2_ros::Buffer* tf_buffer);

@@ -85,74 +85,92 @@ namespace carto = ::cartographer;
 
 using carto::transform::Rigid3d;
 
+/**
+ * 构造函数
+ * node_options 是 node 对象的各种配置参数，在 "node_main.cc" 中由函数 Run 中从配置文件中获取。
+ * map_builder 是 Cartographer 用于建图的对象，而 tf_buffer 是 ROS 系统中常用的坐标变换库 tf2 的缓存对象。
+ * 函数后面的冒号部分是 C++ 标准的构造时对成员变量进行初始化的方法。
+ */
 Node::Node(
     const NodeOptions& node_options,
     std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
-    tf2_ros::Buffer* const tf_buffer)  // 函数后面的冒号表示一个实例的赋值
+    tf2_ros::Buffer* const tf_buffer)
     : node_options_(node_options),
       map_builder_bridge_(node_options_, std::move(map_builder), tf_buffer) {  // 构造函数的主体
+  // 在构造函数一开始，先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
+  // 这里定义的是局部变量 lock，会在其构造函数中对 mutex_ 加锁，当构造函数运行结束之后会销毁该变量，在其析构函数中释放 mutex_。
   carto::common::MutexLocker lock(&mutex_);  // 设置一个互斥锁
 
-  /*
+  /**
    * Publisher
-   * cartographer_ros发布的topics。
-   * 告知master节点，我们将要向kSubmapListTopic这个Topic上发布一个::cartographer_ros_msgs::SubmapList型的message，
-   * 而第二个参数kLatestOnlyPublisherQueueSize是publishing的缓存大小；发布的该Topic即可允许其他节点获取到我们构建的Submap的信息。
-   * kSubmapListTopic 等常量定义在cartographer_ros/node_constants.h
+   * 通过 ROS 的节点句柄 node_handle_ 注册发布了一系列主题。
+   * 这里以前缀 "k" 开始的变量都是在 "node_constants.h" 中定义的常数，它们都是默认的发布消息的名称和消息队列大小。
    */
-  submap_list_publisher_ =                                           // 发布构建的 submap 的list
-      node_handle_.advertise<::cartographer_ros_msgs::SubmapList>(   // kLatestOnlyPublisherQueueSize = 1
-          kSubmapListTopic, kLatestOnlyPublisherQueueSize);          // kSubmapListTopic[] = "submap_list"
-  trajectory_node_list_publisher_ =                                  // 发布 trajectory 的list，在rviz上显示
-      node_handle_.advertise<::visualization_msgs::MarkerArray>(     // kTrajectoryNodeListTopic[] = "trajectory_node_list"
+  // 构建好的子图列表。主题名称为 kSubmapListTopic[] = "submap_list"
+  submap_list_publisher_ =
+      node_handle_.advertise<::cartographer_ros_msgs::SubmapList>(
+          kSubmapListTopic, kLatestOnlyPublisherQueueSize);
+  // 跟踪轨迹路径点列表，用于在 rviz 上显示。主题名称为 kTrajectoryNodeListTopic[] = "trajectory_node_list"
+  trajectory_node_list_publisher_ =
+      node_handle_.advertise<::visualization_msgs::MarkerArray>(
           kTrajectoryNodeListTopic, kLatestOnlyPublisherQueueSize);
-  landmark_poses_list_publisher_ =                                   // 发布 Landmark 的位姿list，在rviz上显示
-      node_handle_.advertise<::visualization_msgs::MarkerArray>(     // kLandmarkPosesListTopic[] = "landmark"
+  // 路标点位姿列表，用于在 rviz 上显示。主题名称为 kLandmarkPosesListTopic[] = "landmark"
+  landmark_poses_list_publisher_ =
+      node_handle_.advertise<::visualization_msgs::MarkerArray>(
           kLandmarkPosesListTopic, kLatestOnlyPublisherQueueSize);
-  constraint_list_publisher_ =                                       // 发布 constraint list，在rviz上显示
-      node_handle_.advertise<::visualization_msgs::MarkerArray>(     // kConstraintListTopic[] = "constraint_list"
+  // 优化约束，用于在 rviz 上显示。主题名称为 kConstraintListTopic[] = "constraint_list"
+  constraint_list_publisher_ =
+      node_handle_.advertise<::visualization_msgs::MarkerArray>(
           kConstraintListTopic, kLatestOnlyPublisherQueueSize);
 
-  /*
+  /**
    * Service Server
-   * 注册一个Service，Service的名字由kSubmapQueryServiceName给出。
-   * 第二个参数HandleSubmapQuery是该Service绑定的函数句柄,即当有一个service的request时，由该函数进行response。
-   * 注册的第一个service就对应了"submap_query"这个service。这是cartographer_node可以提供的一个service。
+   * 注册服务，并保存在容器 service_servers_ 中。
+   * 同样的前缀 "k" 开始的变量都是在 node_constants.h 中定义的常数，它们是默认的服务名称。
+   * 在注册服务的时候还需要提供一个响应该服务的回调函数。
    */
-  service_servers_.push_back(node_handle_.advertiseService(                 // 查询 Submap
-      kSubmapQueryServiceName, &Node::HandleSubmapQuery, this));            // kSubmapQueryServiceName[] = "submap_query";
-  service_servers_.push_back(node_handle_.advertiseService(                 // 开始一段 trajectory
-      kStartTrajectoryServiceName, &Node::HandleStartTrajectory, this));    // kStartTrajectoryServiceName[] = "start_trajectory";
-  service_servers_.push_back(node_handle_.advertiseService(                 // 结束一段 trajectory
-      kFinishTrajectoryServiceName, &Node::HandleFinishTrajectory, this));  // kFinishTrajectoryServiceName[] = "finish_trajectory";
-  service_servers_.push_back(node_handle_.advertiseService(                 // 写状态，把构建的地图数据保存为后缀名为“.pbstream”的文件
-      kWriteStateServiceName, &Node::HandleWriteState, this));              // kWriteStateServiceName[] = "write_state";
+  // 查询 Submap。服务名称为 kSubmapQueryServiceName[] = "submap_query"
+  service_servers_.push_back(node_handle_.advertiseService(                 
+      kSubmapQueryServiceName, &Node::HandleSubmapQuery, this));
+  // 开始一条新的轨迹。服务名称为 kStartTrajectoryServiceName[] = "start_trajectory"
+  service_servers_.push_back(node_handle_.advertiseService(
+      kStartTrajectoryServiceName, &Node::HandleStartTrajectory, this));
+  // 结束一条轨迹。服务名称为 kFinishTrajectoryServiceName[] = "finish_trajectory"
+  service_servers_.push_back(node_handle_.advertiseService(
+      kFinishTrajectoryServiceName, &Node::HandleFinishTrajectory, this));
+  // 写状态，把构建的地图数据保存为后缀名为 ".pbstream" 的文件。服务名称为 kWriteStateServiceName[] = "write_state"
+  service_servers_.push_back(node_handle_.advertiseService(
+      kWriteStateServiceName, &Node::HandleWriteState, this));
 
-  // 发布了一个跟点云相关的Topic
+  // Publisher
+  // 发布匹配的 2D 点云数据。kScanMatchedPointCloudTopic[] = "scan_matched_points2"
   scan_matched_point_cloud_publisher_ =
       node_handle_.advertise<sensor_msgs::PointCloud2>(
-          kScanMatchedPointCloudTopic, kLatestOnlyPublisherQueueSize);      // kScanMatchedPointCloudTopic[] = "scan_matched_points2";
+          kScanMatchedPointCloudTopic, kLatestOnlyPublisherQueueSize);
 
-  /*
-   * （1）wall_timers在node.h中定义，是一个存储::ros::WallTimer类型的vector，
-   *     以下通过vector的push_back操作依次将五个::ros::WallTimer型对象插入这个vector的末尾。
-   * （2）::ros::WallTimer这个类参见如下链接：http://docs.ros.org/jade/api/roscpp/html/classros_1_1WallTimer.html
-   *     简单说，这是一个定时器，这里分别为如下的五个函数设置了定时器。定时器的参数就是node_options_里的各项参数。
-   * （3）接下来是为几个Topic设置了定时器，以及定时器函数。猜测这几个定时器函数里就是定时往Topic上发布消息。
+  /**
+   * ::ros::WallTimer
+   * 创建了一系列计时器保存在容器 wall_timers_ 中。
+   * 这些计时器的作用是通过超时回调函数定时的发布对应主题的消息。计时器的周期由 node_options_ 确定，通过配置文件获取。
    */
-  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kSubmapListTopic上发布消息的定时器
+  // 计时器往主题 "submap_list" 定时发布消息，周期为 node_options_.submap_publish_period_sec
+  wall_timers_.push_back(node_handle_.createWallTimer(
       ::ros::WallDuration(node_options_.submap_publish_period_sec),
       &Node::PublishSubmapList, this));
+  // 计时器往主题 "scan_matched_points2" 定时发布消息，周期为 node_options_.pose_publish_period_sec
   wall_timers_.push_back(node_handle_.createWallTimer(
       ::ros::WallDuration(node_options_.pose_publish_period_sec),
       &Node::PublishTrajectoryStates, this));
-  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kTrajectoryNodeListTopic上发布消息的定时器
+  // 计时器往主题 "trajectory_node_list" 定时发布消息，周期为 node_options_.trajectory_publish_period_sec
+  wall_timers_.push_back(node_handle_.createWallTimer(
       ::ros::WallDuration(node_options_.trajectory_publish_period_sec),
       &Node::PublishTrajectoryNodeList, this));
-  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kLandmarkPosesListTopic上发布消息的定时器
+  // 计时器往主题 "landmark" 定时发布消息，周期为 node_options_.trajectory_publish_period_sec
+  wall_timers_.push_back(node_handle_.createWallTimer(
       ::ros::WallDuration(node_options_.trajectory_publish_period_sec),
       &Node::PublishLandmarkPosesList, this));
-  wall_timers_.push_back(node_handle_.createWallTimer(                   // 往Topic kConstraintListTopic上发布消息的定时器
+  // 计时器往主题 "constraint_list" 定时发布消息，周期为 kConstraintPublishPeriodSec
+  wall_timers_.push_back(node_handle_.createWallTimer(
       ::ros::WallDuration(kConstraintPublishPeriodSec),
       &Node::PublishConstraintList, this));
 }
