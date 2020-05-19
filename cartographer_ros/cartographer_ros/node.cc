@@ -47,8 +47,10 @@ namespace cartographer_ros {
 
 namespace {
 
+// 获取系统默认的订阅主题名称集合
 cartographer_ros_msgs::SensorTopics DefaultSensorTopics() {
   cartographer_ros_msgs::SensorTopics topics;
+  // 这里以前缀 "k" 开始的变量都是在 "node_constants.h" 中定义的常数
   topics.laser_scan_topic = kLaserScanTopic;
   topics.multi_echo_laser_scan_topic = kMultiEchoLaserScanTopic;
   topics.point_cloud2_topic = kPointCloud2Topic;
@@ -411,26 +413,32 @@ Node::ComputeExpectedSensorIds(
   return expected_topics;
 }
 
-/*
- * 同样，AddTrajectory函数也是通过调用map_builder_bridge_中的AddTrajectory来处理。
- * 同时，每增加一条轨迹，都需要给该轨迹增加必要的处理，比如添加位姿估计的AddExtrapolator，
- * 设置传感器的AddSensorSamplers，用来订阅必要的Topic以接收数据的LaunchSubscribers等。
- */
+// 开始一条新的轨迹跟踪，并返回新建轨迹的索引
 int Node::AddTrajectory(const TrajectoryOptions& options,
                         const cartographer_ros_msgs::SensorTopics& topics) {
+  // 通过函数 ComputeExpectedSensorIds() 根据配置选项 options 获取 SendorId。
+  // 所谓的 SensorId 是定义在 "trajectory_builder_interface.h" 中的一个结构体，它一共有两个字段，
+  // type 通过枚举描述了传感器的类型，id 是一个字符串记录了传感器所对应的 ROS 主题名称。
+  // expected_sensor_ids 为订阅的传感器主题名称的集合。
   const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
-      expected_sensor_ids = ComputeExpectedSensorIds(options, topics);  // expected_sensor_ids为我们要订阅的传感器topics名称的集合
+      expected_sensor_ids = ComputeExpectedSensorIds(options, topics);
+  // 通过接口 map_builder_bridge_ 向 Cartographer 添加一条新的轨迹并获取轨迹的索引。
+  // 调用 map_builder_bridge_ 的函数 AddTrajectory() 来处理
   const int trajectory_id =
-      map_builder_bridge_.AddTrajectory(expected_sensor_ids, options);  // 调用 map_builder_bridge_ 中的 AddTrajectory 来处理
+      map_builder_bridge_.AddTrajectory(expected_sensor_ids, options);
   LOG(WARNING) << "trajectory_id: " << trajectory_id;
-  AddExtrapolator(trajectory_id, options);            // 添加位姿估计
-  AddSensorSamplers(trajectory_id, options);          // 设置传感器
-  LaunchSubscribers(options, topics, trajectory_id);  // 订阅必要的 Topic 以接收数据
-  is_active_trajectory_[trajectory_id] = true;
-  for (const auto& sensor_id : expected_sensor_ids) {
+  // 以新添加的轨迹索引 trajectory_id 为键值，通过函数 AddExtrapolator() 和 AddSensorSamplers()
+  // 添加用于位姿插值(PoseExtrapolator)和传感器采样(TrajectorySensorSamplers)的对象。
+  AddExtrapolator(trajectory_id, options);    // 添加位姿估计
+  AddSensorSamplers(trajectory_id, options);  // 设置传感器
+  // 然后调用成员函数 LaunchSubscribers() 完成传感器消息的订阅。
+  // 这是一个关键的步骤，只有订阅了传感器消息，才能够在传感器数据的作用下驱动系统运转，进而完成位姿估计和建图的任务。
+  LaunchSubscribers(options, topics, trajectory_id);
+  is_active_trajectory_[trajectory_id] = true;  // 记录当前正在更新的轨迹
+  for (const auto& sensor_id : expected_sensor_ids) {  // 记录当前轨迹订阅的主题
     subscribed_topics_.insert(sensor_id.id);
   }
-  return trajectory_id;
+  return trajectory_id;  // 返回新建的轨迹索引
 }
 
 // 订阅传感器发布的消息
@@ -649,9 +657,15 @@ bool Node::HandleStartTrajectory(
   return true;
 }
 
+// 使用系统默认的订阅主题来开始轨迹跟踪。
+// 输入参数 options 为轨迹的配置参数，在 "node_main.cc" 中由函数 Run 从配置文件中获取。
 void Node::StartTrajectoryWithDefaultTopics(const TrajectoryOptions& options) {
+  // 先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
   carto::common::MutexLocker lock(&mutex_);
+  // 检查输入的配置是否合法
   CHECK(ValidateTrajectoryOptions(options));
+  // 调用函数 AddTrajectory() 开始轨迹跟踪。
+  // 函数 DefaultSensorTopics() 获取系统默认的订阅主题名称集合，返回的数据类型为 cartographer_ros_msgs::SensorTopics
   AddTrajectory(options, DefaultSensorTopics());
 }
 

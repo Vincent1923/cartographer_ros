@@ -56,7 +56,7 @@ namespace cartographer_ros {
 class Node {
  public:
   /**
-   * @brief Node  构造函数
+   * @brief Node          构造函数
    * @param node_options  node 对象的各种配置参数，在 "node_main.cc" 中由函数 Run 中从配置文件中获取
    * @param map_builder   Cartographer 用于建图的对象
    * @param tf_buffer     ROS 系统中常用的坐标变换库 tf2 的缓存对象
@@ -79,7 +79,12 @@ class Node {
   void RunFinalOptimization();
 
   // Starts the first trajectory with the default topics.
-  // 使用默认的topics名称集合启动第一条trajectory，这里默认的topics名称集合通过函数DefaultSensorTopics()获取。
+  // 使用默认的主题开始第一条轨迹。
+  /**
+   * @brief StartTrajectoryWithDefaultTopics  使用系统默认的订阅主题来开始轨迹跟踪，
+   *                                          这里默认的订阅主题名称集合通过函数 DefaultSensorTopics() 获取。
+   * @param options                           轨迹的配置参数，在 "node_main.cc" 中由函数 Run 从配置文件中获取
+   */
   void StartTrajectoryWithDefaultTopics(const TrajectoryOptions& options);
 
   // Returns unique SensorIds for multiple input bag files based on
@@ -194,10 +199,10 @@ class Node {
       const TrajectoryOptions& options,
       const cartographer_ros_msgs::SensorTopics& topics) const;
   /**
-   * @brief AddTrajectory  增加一条trajectory，并返回其id
-   * @param options        跟trajectory相关的参数配置，如tracking_frame，published_frame等等
-   * @param topics         Cartographer ROS期望获取的传感器数据的topic名称集合
-   * @return               增加的trajectory的id
+   * @brief AddTrajectory  开始一条新的轨迹跟踪，并返回新建轨迹的索引
+   * @param options        轨迹的配置参数，在 "node_main.cc" 中由函数 Run 从配置文件中获取
+   * @param topics         Cartographer ROS 默认的订阅主题名称集合
+   * @return               新建轨迹的索引
    */
   int AddTrajectory(const TrajectoryOptions& options,
                     const cartographer_ros_msgs::SensorTopics& topics);
