@@ -159,40 +159,46 @@ class Node {
   };
 
   /**
-   * @brief HandleSubmapQuery  Service kSubmapQueryServiceName 绑定的函数句柄，
-   *                           主要工作是根据请求的 trajectory_id 和 submap_index，查询对应的 Submap。
-   * @return true              查询 Submap 成功
-   *         false             查询 Submap 失败
+   * @brief HandleSubmapQuery  "/submap_query" 的服务响应函数，根据请求的轨迹索引 trajectory_id 和子图索引 submap_index，
+   *                           向 Cartographer 请求子图。
+   * @param request            服务请求消息，包含两个字段 trajectory_id 和 submap_index
+   * @param response           服务返回消息
+   * @return true              向 Cartographer 请求子图成功
+   *         false             向 Cartographer 请求子图失败
    */
   bool HandleSubmapQuery(
       cartographer_ros_msgs::SubmapQuery::Request& request,
       cartographer_ros_msgs::SubmapQuery::Response& response);
 
   /**
-   * @brief HandleStartTrajectory  Service kStartTrajectoryServiceName绑定的函数句柄，
-   *                               前面一些异常情况的处理，正常情况下调用AddTrajectory函数，增加一条trajectory
-   * @return true                  增加一条trajectory成功
-   *         false                 增加一条trajectory失败
+   * @brief HandleStartTrajectory  "/start_trajectory" 的服务响应函数，开启一个路径跟踪
+   * @param request                服务请求消息
+   * @param response               服务返回消息
+   * @return true                  开启路径跟踪成功
+   *         false                 开启路径跟踪失败
    */
   bool HandleStartTrajectory(
       cartographer_ros_msgs::StartTrajectory::Request& request,
       cartographer_ros_msgs::StartTrajectory::Response& response);
 
   /**
-   * @brief HandleFinishTrajectory  Service kFinishTrajectoryServiceName绑定的函数句柄，
-   *                                根据请求的trajectory_id，结束该trajectory
-   * @return true                   结束一条trajectory成功
-   *         false                  结束一条trajectory失败
+   * @brief HandleFinishTrajectory  "/finish_trajectory" 的服务响应函数，根据请求的轨迹索引 trajectory_id 停止路径跟踪
+   * @param request                 服务请求消息，只有一个字段 trajectory_id
+   * @param response                服务返回消息
+   * @return true                   停止路径跟踪成功
+   *         false                  停止路径跟踪失败
    */
   bool HandleFinishTrajectory(
       cartographer_ros_msgs::FinishTrajectory::Request& request,
       cartographer_ros_msgs::FinishTrajectory::Response& response);
 
   /**
-   * @brief HandleWriteState  Service kWriteStateServiceName绑定的函数句柄，
-   *                          写状态，根据请求的request.filename文件名，把构建的地图数据保存为后缀名为“.pbstream”的文件
-   * @return true             保存地图数据文件成功
-   *         false            保存地图数据文件失败
+   * @brief HandleWriteState  "/write_state" 的服务响应函数，向 Cartographer 请求状态，并把结果序列化到指定的文件中，
+   *                          文件名字为请求的名字 filename，后缀为 ".pbstream"。
+   * @param request           服务请求消息，只有一个字段 filename
+   * @param response          服务返回消息
+   * @return true             向 Cartographer 请求状态成功
+   *         false            向 Cartographer 请求状态失败
    */
   bool HandleWriteState(cartographer_ros_msgs::WriteState::Request& request,
                         cartographer_ros_msgs::WriteState::Response& response);

@@ -190,17 +190,15 @@ Node::~Node() { FinishAllTrajectories(); }
 
 ::ros::NodeHandle* Node::node_handle() { return &node_handle_; }
 
-// Service kSubmapQueryServiceName 绑定的函数句柄，主要工作是根据请求的 trajectory_id 和 submap_index，查询对应的 Submap。
-// 函数有两个参数，
-// 一个参数是一个 ::cartographer_ros_msgs::SubmapQuery::Request 型的变量，对应是请求服务时的输入参数，
-// 另外一个参数是 ::cartographer_ros_msgs::SubmapQuery::Response 型的变量，对应的是服务响应后的返回值。
+// "/submap_query" 的服务响应函数，根据请求的轨迹索引 trajectory_id 和子图索引 submap_index，
+// 向 Cartographer 请求子图。
 bool Node::HandleSubmapQuery(
     ::cartographer_ros_msgs::SubmapQuery::Request& request,
     ::cartographer_ros_msgs::SubmapQuery::Response& response) {
-  carto::common::MutexLocker lock(&mutex_);  // 设置互斥锁
-  // map_builder_bridge_ 在node.h 定义，是一个 MapBuilderBridge 型的变量。
-  // map_builder_bridge_ 本质上的功能是由 map_builder.cc 决定的。
-  map_builder_bridge_.HandleSubmapQuery(request, response);  // 调用了 map_builder_bridge_ 的 HandlesSubmapQuery 来做处理
+  // 先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
+  carto::common::MutexLocker lock(&mutex_);
+  // 通过 map_builder_bridge_ 对象的 函数 HandlesSubmapQuery() 请求子图
+  map_builder_bridge_.HandleSubmapQuery(request, response);
   return true;
 }
 
@@ -640,35 +638,33 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
   return status_response;
 }
 
-// 前面一些异常情况的处理，正常情况下调用AddTrajectory函数，增加一条trajectory。
-/*
- * cartographer_ros_msgs::StartTrajectory定义：
- *   cartographer_ros_msgs/TrajectoryOptions options
- *   cartographer_ros_msgs/SensorTopics topics
- *   ---
- *   cartographer_ros_msgs/StatusResponse status
- *   int32 trajectory_id
- */
+// "/start_trajectory" 的服务响应函数，开启一个路径跟踪
 bool Node::HandleStartTrajectory(
     ::cartographer_ros_msgs::StartTrajectory::Request& request,
     ::cartographer_ros_msgs::StartTrajectory::Response& response) {
+  // 先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
   carto::common::MutexLocker lock(&mutex_);
-  TrajectoryOptions options;
-  // FromRosMessage() 函数将"msg"转换为"options"，成功时返回true，失败时返回false。
-  // ValidateTrajectoryOptions() 函数判断请求的 options 参数配置是否合法。
-  if (!FromRosMessage(request.options, &options) ||           // 异常情况的处理
+  TrajectoryOptions options;  // 轨迹的配置参数
+  // 通过两个条件语句来检查输入参数 request
+  if (!FromRosMessage(request.options, &options) ||
       !ValidateTrajectoryOptions(options)) {
+    // 输入参数 request.options 不合法，报错返回。
+    // FromRosMessage() 函数将 "msg" 转换为 "options"，成功时返回 true，失败时返回 false。
+    // ValidateTrajectoryOptions() 函数判断请求的 options 参数配置是否合法。
     const std::string error = "Invalid trajectory options.";
     LOG(ERROR) << error;
     response.status.code = cartographer_ros_msgs::StatusCode::INVALID_ARGUMENT;
     response.status.message = error;
-  } else if (!ValidateTopicNames(request.topics, options)) {  // 异常情况的处理，ValidateTopicNames() 函数判断请求的 topics 名称是否合法。
+  } else if (!ValidateTopicNames(request.topics, options)) {
+    // 输入参数 request.topics 不合法，报错返回。
+    // ValidateTopicNames() 函数判断请求的订阅主题名称 request.topics 是否合法。
     const std::string error = "Invalid topics.";
     LOG(ERROR) << error;
     response.status.code = cartographer_ros_msgs::StatusCode::INVALID_ARGUMENT;
     response.status.message = error;
-  } else {                                                    // 正常情况下调用AddTrajectory函数，增加一条trajectory
-    response.trajectory_id = AddTrajectory(options, request.topics);  // 返回trajectory的id
+  } else {
+    // 如果输入参数合法则通过函数 AddTrajectory() 按照服务请求的订阅主题开启一个路径跟踪，并填充返回消息的相关字段
+    response.trajectory_id = AddTrajectory(options, request.topics);  // 返回新添加轨迹的索引
     response.status.code = cartographer_ros_msgs::StatusCode::OK;
     response.status.message = "Success.";
   }
@@ -721,33 +717,26 @@ int Node::AddOfflineTrajectory(
   return trajectory_id;
 }
 
-// 根据请求的trajectory_id，结束该trajectory
-/*
- * cartographer_ros_msgs::FinishTrajectory定义：
- *   int32 trajectory_id
- *   ---
- *   cartographer_ros_msgs/StatusResponse status
- */
+// "/finish_trajectory" 的服务响应函数，根据请求的轨迹索引 trajectory_id 停止路径跟踪
 bool Node::HandleFinishTrajectory(
     ::cartographer_ros_msgs::FinishTrajectory::Request& request,
     ::cartographer_ros_msgs::FinishTrajectory::Response& response) {
+  // 先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
   carto::common::MutexLocker lock(&mutex_);
+  // 调用函数 FinishTrajectoryUnderLock() 停止路径跟踪
   response.status = FinishTrajectoryUnderLock(request.trajectory_id);
   return true;
 }
 
-// 写状态，根据请求的request.filename文件名，把构建的地图数据保存为后缀名为“.pbstream”的文件
-/*
- * cartographer_ros_msgs::WriteState定义：
- *   string filename
- *   ---
- *   cartographer_ros_msgs/StatusResponse status
- */
+// "/write_state" 的服务响应函数，向 Cartographer 请求状态，并把结果序列化到指定的文件中，
+// 文件名字为请求的名字 filename，后缀为 ".pbstream"。
 bool Node::HandleWriteState(
     ::cartographer_ros_msgs::WriteState::Request& request,
     ::cartographer_ros_msgs::WriteState::Response& response) {
+  // 先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
   carto::common::MutexLocker lock(&mutex_);
-  // 调用了 map_builder_bridge_.SerializeState(request.filename) 函数进行写文件的操作
+  // 通过 map_builder_bridge_ 对象的函数 SerializeState() 向 Cartographer 请求状态，
+  // 并把结果序列化到指定的文件 request.filename 中。
   if (map_builder_bridge_.SerializeState(request.filename)) {
     response.status.code = cartographer_ros_msgs::StatusCode::OK;
     response.status.message = "State written to '" + request.filename + "'.";
