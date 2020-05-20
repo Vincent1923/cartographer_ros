@@ -824,18 +824,25 @@ void Node::HandleLandmarkMessage(
       ->HandleLandmarkMessage(sensor_id, msg);
 }
 
+// 处理 IMU 的消息回调函数
 void Node::HandleImuMessage(const int trajectory_id,
                             const std::string& sensor_id,
                             const sensor_msgs::Imu::ConstPtr& msg) {
+  // 先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
   carto::common::MutexLocker lock(&mutex_);
+  // 通过采样器对传感器的数据进行降采样。
   if (!sensor_samplers_.at(trajectory_id).imu_sampler.Pulse()) {
     return;
   }
   auto sensor_bridge_ptr = map_builder_bridge_.sensor_bridge(trajectory_id);
   auto imu_data_ptr = sensor_bridge_ptr->ToImuData(msg);
   if (imu_data_ptr != nullptr) {
+    // 将 IMU 数据喂给位姿估计器 extrapolators_
+    // 位姿估计器的数据类型是定义在 cartographer 的 PoseExtrapolator，
+    // 在函数 AddTrajectory() 中通过调用 AddExtrapolator() 完成初始化操作。
     extrapolators_.at(trajectory_id).AddImuData(*imu_data_ptr);
   }
+  // 通过 map_builder_bridge_ 将传感器数据喂给 Cartographer
   sensor_bridge_ptr->HandleImuMessage(sensor_id, msg);
 }
 
@@ -853,13 +860,21 @@ void Node::HandleLaserScanMessage(const int trajectory_id,
       ->HandleLaserScanMessage(sensor_id, msg);
 }
 
+// 处理多线激光扫描数据 multi_echo_laser_scan 的消息回调函数
 void Node::HandleMultiEchoLaserScanMessage(
     const int trajectory_id, const std::string& sensor_id,
     const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg) {
+  // 先对互斥量 mutex_ 加锁，防止因为多线程等并行运算的方式产生异常的行为。
   carto::common::MutexLocker lock(&mutex_);
+  // 通过采样器对传感器的数据进行降采样。
+  // 采样器的数据类型是定义在 "node.h" 中的结构体 TrajectorySensorSamplers，在函数 AddTrajectory() 中
+  // 通过调用 AddSensorSamplers() 完成初始化操作。
+  // 其本质是对 cartographer 中的采样器(fixed_ratio_sampler.h, fixed_ratio_sampler.cc)的封装，
+  // 用一个计数器来按照一个指定的频率对原始的数据进行降采样，采样频率可以通过轨迹参数文件来配置。
   if (!sensor_samplers_.at(trajectory_id).rangefinder_sampler.Pulse()) {
     return;
   }
+  // 通过 map_builder_bridge_ 将传感器数据喂给 Cartographer
   map_builder_bridge_.sensor_bridge(trajectory_id)
       ->HandleMultiEchoLaserScanMessage(sensor_id, msg);
 }

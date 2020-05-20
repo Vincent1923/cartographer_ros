@@ -110,6 +110,12 @@ class Node {
   void HandleLandmarkMessage(
       int trajectory_id, const std::string& sensor_id,
       const cartographer_ros_msgs::LandmarkList::ConstPtr& msg);
+  /**
+   * @brief HandleImuMessage  处理 IMU 的消息回调函数
+   * @param trajectory_id     轨迹索引
+   * @param sensor_id         IMU 传感器主题，默认名称为 "imu"
+   * @param msg               IMU 消息
+   */
   void HandleImuMessage(int trajectory_id, const std::string& sensor_id,
                         const sensor_msgs::Imu::ConstPtr& msg);
   /**
@@ -121,6 +127,12 @@ class Node {
    */
   void HandleLaserScanMessage(int trajectory_id, const std::string& sensor_id,
                               const sensor_msgs::LaserScan::ConstPtr& msg);
+  /**
+   * @brief HandleMultiEchoLaserScanMessage  处理多线激光扫描数据 multi_echo_laser_scan 的消息回调函数
+   * @param trajectory_id                    轨迹索引
+   * @param sensor_id                        多线激光扫描数据 multi_echo_laser_scan 的主题，默认名称为 "echoes"
+   * @param msg                              多线激光扫描的消息
+   */
   void HandleMultiEchoLaserScanMessage(
       int trajectory_id, const std::string& sensor_id,
       const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg);
