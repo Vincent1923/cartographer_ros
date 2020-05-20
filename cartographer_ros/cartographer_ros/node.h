@@ -207,11 +207,10 @@ class Node {
   int AddTrajectory(const TrajectoryOptions& options,
                     const cartographer_ros_msgs::SensorTopics& topics);
   /**
-   * @brief LaunchSubscribers  订阅传感器发布的消息
-   * @param options            跟trajectory相关的参数配置，如tracking_frame，published_frame等等
-   * @param topics             输入的传感器数据的topic名称
-   * @param trajectory_id      trajectory的id
-   * @return
+   * @brief LaunchSubscribers  根据配置订阅需要的主题
+   * @param options            轨迹的配置参数，在 "node_main.cc" 中由函数 Run 从配置文件中获取
+   * @param topics             Cartographer ROS 默认的订阅主题名称集合
+   * @param trajectory_id      轨迹的索引
    */
   void LaunchSubscribers(const TrajectoryOptions& options,
                          const cartographer_ros_msgs::SensorTopics& topics,

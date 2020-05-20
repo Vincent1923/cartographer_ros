@@ -63,11 +63,20 @@ cartographer_ros_msgs::SensorTopics DefaultSensorTopics() {
 
 // Subscribes to the 'topic' for 'trajectory_id' using the 'node_handle' and
 // calls 'handler' on the 'node' to handle messages. Returns the subscriber.
-// 使用'node_handle'为'trajectory_id'的路径订阅'topic'，并在'node'上调用'handler'来处理消息。返回subscriber。
-// 这里用函数指针void (Node::*handler)(int, const std::string&, const typename MessageType::ConstPtr&)
-// 作为函数SubscribeWithHandler的其中一个形式参数。
+// 使用 "node_handle"为 "trajectory_id" 的路径订阅 "topic"，并在 "node" 上调用 "handler" 来处理消息。返回 subscriber。
+/**
+ * @brief SubscribeWithHandler  订阅传感器的主题，这是一个模板函数，模板为传感器的消息类型，
+ *                              例如，单线激光数据 laser_scan 的消息类型为 sensor_msgs::LaserScan
+ * @param trajectory_id         轨迹的索引
+ * @param topic                 传感器的主题，例如单线激光数据 laser_scan 的系统默认主题为 "scan"
+ * @param node_handle           ROS 的节点句柄
+ * @param node
+ * @return                      传感器的订阅器，数据类型为 ::ros::Subscriber
+ */
 template <typename MessageType>
 ::ros::Subscriber SubscribeWithHandler(
+    // 这里用函数指针 void (Node::*handler)(int, const std::string&, const typename MessageType::ConstPtr&)
+    // 作为函数 SubscribeWithHandler 的第一个形式参数。
     void (Node::*handler)(int, const std::string&,
                           const typename MessageType::ConstPtr&),
     const int trajectory_id, const std::string& topic,
@@ -441,37 +450,40 @@ int Node::AddTrajectory(const TrajectoryOptions& options,
   return trajectory_id;  // 返回新建的轨迹索引
 }
 
-// 订阅传感器发布的消息
+// 根据配置订阅需要的主题
 void Node::LaunchSubscribers(const TrajectoryOptions& options,
                              const cartographer_ros_msgs::SensorTopics& topics,
                              const int trajectory_id) {
   LOG(WARNING) << "Subscribe topics:";
-  // subscribers_的类型为std::unordered_map<int, std::vector<Subscriber>>，
-  // 它把trajectory id和该路径下所有传感器数据订阅的Subscriber绑定在一起。
-  /*
-   * （1）subscribers_ 的类型为 std::unordered_map<int, std::vector<Subscriber>>，
-   *     这是一个 std::unordered_map 的容器，容器的 key 为 int 类型，表示 trajectory 的下标，
-   *     而 std::vector<Subscriber> 表示一条 trajectory 中所有订阅传感器数据的 Subscriber 集合，
-   *     它把 trajectory id 和该路径下所有传感器数据订阅的Subscriber绑定在一起。
-   * （2）SubscribeWithHandler()函数主要作用就是订阅一个以topic为名字的Topic，
-   *     不同的传感器中的topic这个变量是for循环体中的这一句代码赋值的
-   *     const std::string& topic:ComputeRepeatedTopicNames(topics.laser_scan_topic, options.num_laser_scans)，
-   *     然后返回了一个node_handle->subscribe<MessageType>，即返回值类型为::ros::Subscriber。
-   *     在LaunchSubscribers函数里把这个返回值压入了subscribers_[trajectory_id]列表中。
-   * （3）订阅之后的处理是在Node::HandleLaserScanMessage，查看该代码就可以发现最后依然交给了map_builder_bridge_去处理。
-   *     其中这里用函数指针&Node::HandleLaserScanMessage作为函数SubscribeWithHandler的其中一个实际参数。
-   * （4）这里用函数名&Node::HandleLaserScanMessage作为函数SubscribeWithHandler的其中一个输入参数。
-   */
-  for (const std::string& topic : ComputeRepeatedTopicNames(     // 订阅sensor_msgs::LaserScan
+  // 订阅单线激光数据 laser_scan 的主题，默认名称为 "scan"，消息类型为 sensor_msgs::LaserScan
+  // for 循环写法是 C++11 标准中新增的 "for range" 形式，函数 ComputeRepeatedTopicNames() 是用来处理有多个相同类型的传感器的。
+  // 比如这里的单线激光 laser_scan，通过在配置文件中的 num_laser_scans 字段指定单线激光的数量。
+  // 假如输入参数 topics.laser_scan_topic 中对应的主题名称是 "scan"，那么如果只有一个单线激光，
+  // 就是用 scan 作为订阅主题名称，如果有多个单线激光则在主题名称之后添加数字予以区别，即 scan_1, scan_2, ...
+  for (const std::string& topic : ComputeRepeatedTopicNames(
            topics.laser_scan_topic, options.num_laser_scans)) {
     std::cout << "topics.laser_scan_topic: " << topic << std::endl;
+    // 通过定义在 "node.cc" 中的模板函数 SubscribeWithHandler() 调用 ROS 的节点句柄 node_handle_ 来订阅传感器的主题。
+    // subscribers_ 的类型为 std::unordered_map<int, std::vector<Subscriber>>，
+    /**
+     * 1. 通过定义在 "node.cc" 中的模板函数 SubscribeWithHandler() 调用 ROS 的节点句柄 node_handle_ 来订阅传感器的主题。
+     * 2. 容器对象 subscribers_ 的类型为 std::unordered_map<int, std::vector<Subscriber>>，
+     *    这是一个 std::unordered_map 的容器，容器的 key 为 int 类型，表示轨迹索引，
+     *    而 std::vector<Subscriber> 表示一条轨迹中所有的传感器的订阅器集合，
+     *    所以 subscribers_ 保存的是轨迹索引为 trajectory_id 的轨迹下的所有构建的订阅器集合，
+     *    即它把轨迹索引 trajectory_id 和该轨迹下所有订阅传感器主题的订阅器 Subscriber 绑定在一起，
+     *    其中元素的数据类型是 Node 类型中定义的私有结构体 Subscriber，有两个字段为 subscriber 和 topic，分别记录了订阅器和传感器主题。
+     * 3. 订阅之后的处理是在函数 Node::HandleLaserScanMessage()，查看该代码可以发现最后交给了 map_builder_bridge_ 去处理。
+     *    其中这里用函数指针 &Node::HandleLaserScanMessage 作为函数 SubscribeWithHandler() 的其中一个实际参数。
+     */
     subscribers_[trajectory_id].push_back(
         {SubscribeWithHandler<sensor_msgs::LaserScan>(
              &Node::HandleLaserScanMessage, trajectory_id, topic, &node_handle_,
              this),
          topic});
   }
-  for (const std::string& topic :                                        // 订阅sensor_msgs::MultiEchoLaserScan
+  // 订阅多线激光扫描数据 multi_echo_laser_scan 的主题，默认名称为 "echoes"，消息类型为 sensor_msgs::MultiEchoLaserScan
+  for (const std::string& topic :
        ComputeRepeatedTopicNames(topics.multi_echo_laser_scan_topic,
                                  options.num_multi_echo_laser_scans)) {
     std::cout << "topics.multi_echo_laser_scan_topic: " << topic << std::endl;
@@ -481,7 +493,8 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
              &node_handle_, this),
          topic});
   }
-  for (const std::string& topic : ComputeRepeatedTopicNames(        // 订阅sensor_msgs::PointCloud2
+  // 订阅点云数据 point_clouds 的主题，默认名称为 "points2"，消息类型为 sensor_msgs::PointCloud2
+  for (const std::string& topic : ComputeRepeatedTopicNames(
            topics.point_cloud2_topic, options.num_point_clouds)) {
     std::cout << "topics.point_cloud2_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
@@ -493,7 +506,9 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
 
   // For 2D SLAM, subscribe to the IMU if we expect it. For 3D SLAM, the IMU is
   // required.
-  if (node_options_.map_builder_options.use_trajectory_builder_3d() ||     // 订阅sensor_msgs::Imu
+  // 订阅 IMU 传感器主题，默认名称为 "imu"，消息类型为 sensor_msgs::Imu
+  // 如果是三维建图就必须使用 IMU，二维建图可以通过配置文件中的 use_imu_data 字段设置。
+  if (node_options_.map_builder_options.use_trajectory_builder_3d() ||
       (node_options_.map_builder_options.use_trajectory_builder_2d() &&
        options.trajectory_builder_options.trajectory_builder_2d_options()
            .use_imu_data())) {
@@ -506,7 +521,8 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
          topic});
   }
 
-  if (options.use_odometry) {                                                    // 订阅nav_msgs::Odometry
+  // 订阅里程计 Odometry 传感器主题，默认名称为 "odom"，消息类型为 nav_msgs::Odometry
+  if (options.use_odometry) {
     std::string topic = topics.odometry_topic;
     std::cout << "topics.odometry_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
@@ -515,7 +531,8 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
                                                   &node_handle_, this),
          topic});
   }
-  if (options.use_nav_sat) {                                                      // 订阅sensor_msgs::NavSatFix
+  // 订阅导航卫星 NavSatFix 传感器主题，默认名称为 "fix"，消息类型为 sensor_msgs::NavSatFix
+  if (options.use_nav_sat) {
     std::string topic = topics.nav_sat_fix_topic;
     std::cout << "topics.nav_sat_fix_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
@@ -524,7 +541,8 @@ void Node::LaunchSubscribers(const TrajectoryOptions& options,
              this),
          topic});
   }
-  if (options.use_landmarks) {                                                   // 订阅cartographer_ros_msgs::LandmarkList
+  // 订阅路标 Landmark 传感器主题，默认名称为 "landmark"，消息类型为 cartographer_ros_msgs::LandmarkList
+  if (options.use_landmarks) {
     std::string topic = topics.landmark_topic;
     std::cout << "topics.landmark_topic: " << topic << std::endl;
     subscribers_[trajectory_id].push_back(
