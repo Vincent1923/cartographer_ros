@@ -43,7 +43,14 @@ namespace cartographer_ros {
 // 在MapBuilder的tracking frame中将ROS消息转换为SensorData。
 class SensorBridge {
  public:
-  // 构造函数
+  /**
+   * @brief SensorBridge                     构造函数
+   * @param num_subdivisions_per_laser_scan  激光雷达数据分段数量
+   * @param tracking_frame                   参考坐标系
+   * @param lookup_transform_timeout_sec     tf 坐标变换查询超时设置
+   * @param tf_buffer                        tf 坐标变换缓存
+   * @param trajectory_builder               轨迹构建器
+   */
   explicit SensorBridge(
       int num_subdivisions_per_laser_scan, const std::string& tracking_frame,
       double lookup_transform_timeout_sec, tf2_ros::Buffer* tf_buffer,
@@ -145,14 +152,13 @@ class SensorBridge {
                          const std::string& frame_id,
                          const ::cartographer::sensor::TimedPointCloud& ranges);
 
-  const int num_subdivisions_per_laser_scan_;  // 每个接收到的 (multi-echo) laser scan 中分离出来的点云的数量
+/*************************************** 成员变量 ***************************************/
+  const int num_subdivisions_per_laser_scan_;                 // 激光传感器的分段数量
   std::map<std::string, cartographer::common::Time>
-      sensor_to_previous_subdivision_time_;
-  const TfBridge tf_bridge_;
-  // 这里的 trajectory_builder_ 主要负责处理各种传感器消息，通过调用这个成员类的虚函数 AddSensorData() 进行处理，
-  // 而 CollatedTrajectoryBuilder 继承了这个类并实现了 AddSensorData() 函数。
+      sensor_to_previous_subdivision_time_;                   // 记录了各个传感器最新数据的时间
+  const TfBridge tf_bridge_;                                  // cartographer_ros 中关于 ROS 坐标变换的封装
   ::cartographer::mapping::TrajectoryBuilderInterface* const
-      trajectory_builder_;
+      trajectory_builder_;                                    // Cartographer 的核心对象 map_builder_ 提供的轨迹跟踪器
 
   ::cartographer::common::optional<::cartographer::transform::Rigid3d>
       ecef_to_local_frame_;

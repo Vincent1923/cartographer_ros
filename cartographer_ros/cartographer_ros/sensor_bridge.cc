@@ -39,20 +39,18 @@ const std::string& CheckNoLeadingSlash(const std::string& frame_id) {
 
 }  // namespace
 
-/*
- * （1）构造函数做的工作就是把参数表赋值给成员变量
- * （2）但需要注意的是成员变量中有一个TrajectoryBuilderInterface型的一个指针变量。
- *     继续跟踪代码我们可以发现，cartographer中各种消息都统一调用了这个成员类的虚函数AddSensorData()。
- * （3）而CollatedTrajectoryBuilder继承了这个类并实现了AddSensorData()函数。
- *     这两个类都定义在cartographer中的mapping文件夹下。
- *     CollatedTrajectoryBuilder的构造函数说明通过统一调用HandleCollatedSensorData()函数，
- *     来轮询处理kImu(IMU消息)、kRangefinder(测距消息，不仅仅是激光)、kOdometer(里程计消息)等。
+/**
+ * 1. 构造函数，函数主体是空的没有任何操作，主要工作就是把参数表赋值给成员变量。
+ * 2. 有五个输入参数，前面四个参数是从配置文件中加载的配置，第五个参数 trajectory_builder_ 则是 Cartographer 的一个核心对象，
+ *    通过 sensor_bridge 对象转换后的数据都是通过它喂给 Cartographer 的，在 map_builder_bridge_ 的成员函数
+ *    AddTrajectory() 中通过 map_builder_->GetTrajectoryBuilder(trajectory_id) 获得。
  */
 SensorBridge::SensorBridge(
-    const int num_subdivisions_per_laser_scan,
-    const std::string& tracking_frame,
-    const double lookup_transform_timeout_sec, tf2_ros::Buffer* const tf_buffer,
-    carto::mapping::TrajectoryBuilderInterface* const trajectory_builder)
+    const int num_subdivisions_per_laser_scan,  // 激光雷达数据分段数量
+    const std::string& tracking_frame,          // 参考坐标系
+    const double lookup_transform_timeout_sec,  // tf 坐标变换查询超时设置
+    tf2_ros::Buffer* const tf_buffer,           // tf 坐标变换缓存
+    carto::mapping::TrajectoryBuilderInterface* const trajectory_builder)  // 轨迹构建器
     : num_subdivisions_per_laser_scan_(num_subdivisions_per_laser_scan),    // 初始化 num_subdivisions_per_laser_scan_
       tf_bridge_(tracking_frame, lookup_transform_timeout_sec, tf_buffer),  // 初始化 tf_bridge_
       trajectory_builder_(trajectory_builder) {}                            // 初始化 trajectory_builder_

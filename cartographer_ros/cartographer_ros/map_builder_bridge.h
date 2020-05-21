@@ -62,7 +62,13 @@ class MapBuilderBridge {
     TrajectoryOptions trajectory_options;                     // 配置参数
   };
 
-  // 构造函数
+  /**
+   * @brief MapBuilderBridge  构造函数。
+   *                          对象 map_builder_bridge_ 主要完成 ROS 系统与 Cartographer 内核之间的信息交换。
+   * @param node_options      从配置文件中加载的配置项
+   * @param map_builder       Cartographer 的地图构建器
+   * @param tf_buffer         ROS 系统中坐标变换库 tf2 的监听缓存
+   */
   MapBuilderBridge(
       const NodeOptions& node_options,
       std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
@@ -118,14 +124,22 @@ class MapBuilderBridge {
   visualization_msgs::MarkerArray GetConstraintList();
 
   /**
-   * @brief sensor_bridge  根据指定的 trajectory_id，返回对应的 SensorBridge 指针
-   * @param trajectory_id  trajectory的id
-   * @return
+   * @brief sensor_bridge  返回 map 容器中 trajectory_id 所对应的 SensorBridge 对象
+   * @param trajectory_id  轨迹索引
+   * @return               map 容器中 trajectory_id 所对应的 SensorBridge 对象
    */
   SensorBridge* sensor_bridge(int trajectory_id);
 
  private:
   // 成员函数
+  /**
+   * @brief OnLocalSlamResult    函数的目的就是记录下轨迹状态
+   * @param trajectory_id        轨迹索引
+   * @param time                 更新子图的时间
+   * @param local_pose           子图的参考位置
+   * @param range_data_in_local  参考位置下的扫描数据
+   * @param insertion_result     这是一个指针似乎没有用到
+   */
   void OnLocalSlamResult(
       const int trajectory_id, const ::cartographer::common::Time time,
       const ::cartographer::transform::Rigid3d local_pose,
@@ -135,23 +149,23 @@ class MapBuilderBridge {
           insertion_result) EXCLUDES(mutex_);
 
 /*************************************** 成员变量 ***************************************/
-  cartographer::common::Mutex mutex_;
-  const NodeOptions node_options_;  // Cartographer ROS 的配置项，包含 map_builder_options 以及一些周期
+  cartographer::common::Mutex mutex_;                                             // 互斥信号量
+  const NodeOptions node_options_;                                                // ROS 节点 cartographer_node 的配置
   std::unordered_map<int, std::shared_ptr<const TrajectoryState::LocalSlamData>>
-      trajectory_state_data_ GUARDED_BY(mutex_);
-  std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder_;
-  tf2_ros::Buffer* const tf_buffer_;
+      trajectory_state_data_ GUARDED_BY(mutex_);                                  // 轨迹状态数据容器
+  std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder_;       // Cartographer 的地图构建器
+  tf2_ros::Buffer* const tf_buffer_;                                              // ROS 系统坐标变换缓存
 
   // 跟 landmark 相关，其中 std::string 变量表征 landmark 的 ID
-  std::unordered_map<std::string /* landmark ID */, int> landmark_to_index_;
+  std::unordered_map<std::string /* landmark ID */, int> landmark_to_index_;  // 路标名称与索引之间的映射
 
   // These are keyed with 'trajectory_id'.
-  // 以下的变量都以“trajectory_id”为键，即变量都跟“trajectory_id”关联
-  std::unordered_map<int, TrajectoryOptions> trajectory_options_;  // 路径 trajectory_id 的配置项
+  // 以下的变量都以 "trajectory_id" 为键，即变量都跟 "trajectory_id" 关联。
+  std::unordered_map<int, TrajectoryOptions> trajectory_options_;          // 轨迹跟踪器的配置容器
   // sensor_bridges_ 为 SensorBridge 成员的一个 unordered map，
   // 在函数 MapBuilderBridge::AddTrajectory 中进行初始化。
-  std::unordered_map<int, std::unique_ptr<SensorBridge>> sensor_bridges_;  // 处理路径 trajectory_id 下的传感器数据
-  std::unordered_map<int, size_t> trajectory_to_highest_marker_id_;
+  std::unordered_map<int, std::unique_ptr<SensorBridge>> sensor_bridges_;  // 传感器数据转换器容器
+  std::unordered_map<int, size_t> trajectory_to_highest_marker_id_;        // 轨迹与路标之间的对应关系
 };
 
 }  // namespace cartographer_ros

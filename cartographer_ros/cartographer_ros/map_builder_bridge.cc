@@ -97,18 +97,22 @@ void PushAndResetLineMarker(visualization_msgs::Marker* marker,
 
 }  // namespace
 
-/*
- * MapBuilderBridge构造函数，构造函数里只是做了一下实例化赋值。
- * 函数体是空的，所做的只是实例化赋值了一个map_builder。
- * map_builder是接口MapBuilderInterface的一个实例化对象。
+/**
+ * 1. 构造函数。只是为必要的变量提供初值，除此之外没有任何其他的操作。
+ * 2. 这个函数的三个输入变量都是 cartographer_node 在系统运行之初构建的。
+ *    node_options 是从配置文件中加载的配置项，
+ *    map_builder 则是 Cartographer 的地图构建器，
+ *    tf_buffer 是 ROS 系统中坐标变换库 tf2 的监听缓存。
+ * 3. map_builder_bridge_ 对象是 node 对象的一个成员，在 node 对象的构造函数中构建。
+ *    而它的初始化需要在 node 对象调用它的成员函数 AddTrajectory() 之后才能触发。
  */
 MapBuilderBridge::MapBuilderBridge(
     const NodeOptions& node_options,
     std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
     tf2_ros::Buffer* const tf_buffer)
-    : node_options_(node_options),           // 初始化node_options_
-      map_builder_(std::move(map_builder)),  // 初始化map_builder_
-      tf_buffer_(tf_buffer) {}               // 初始化tf_buffer_
+    : node_options_(node_options),           // 初始化 node_options_
+      map_builder_(std::move(map_builder)),  // 初始化 map_builder_
+      tf_buffer_(tf_buffer) {}               // 初始化 tf_buffer_
 
 // 调用了map_builder_的成员函数LoadState来加载一个.pbstream文件。
 // map_builder_是接口MapBuilderInterface的实例化对象，而根据是2d还是3d情况，其具体实现会略有不同。
@@ -132,17 +136,22 @@ int MapBuilderBridge::AddTrajectory(
     const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>&
         expected_sensor_ids,
     const TrajectoryOptions& trajectory_options) {
-  /*
-   * 1. 调用了map_builder_->AddTrajectoryBuilder，这已经是cartographer项目中的代码了。
-   * 2. std::bind用来将可调用对象与其参数进行绑定。绑定之后的结果可以使用std::function进行保存，
+  /**
+   * 1. 通知 map_builder_ 对象添加一个轨迹跟踪器，同时将构建成功的索引返回保存在局部变量 trajectory_id 中。
+   * 2. 有三个输入参数：
+   *    expected_sensor_ids 为订阅的传感器主题名称的集合；
+   *    trajectory_options.trajectory_builder_options 是轨迹跟踪器的配置信息；
+   *    第三个参数比较重要，看字面意思，它相当于注册了一个回调函数 OnLocalSlamResult，
+   *    用于响应 map_builder_ 完成一个局部 SLAM 或者说是成功构建了一个子图的事件。
+   * 3. std::bind 用来将可调用对象与其参数进行绑定。绑定之后的结果可以使用 std::function 进行保存，
    *     并延迟调用到任何需要的时候。一般来讲，它主要有两大作用：
    *    （1）将可调用对象与其参数一起绑定成为一个仿函数；
-   *    （2）将多元可调用对象转换成为1元或是（n-1）元调用对象，既只是绑定部分参数。
-   *    实际上std::bind的返回类型是一个std内部定义的仿函数类型，在这里就只需要知道它是一个仿函数，
-   *    可以赋值给一个std::function，这里直接用std::function类型来保存std::bind的返回值也是可以的。
-   *    其中std::placeholders::_1是一个占位符，代表这个位置将在函数调用时，被传入的第一个参数代替。
-   * 3. 所以map_builder_->AddTrajectoryBuilder这个函数的第三个参数是一个std:function型的。
-   *    这样，在map_builder_->AddTrajectoryBuilder内部可以通过如下方式调用MapBuilderBridge::OnLocalSlamResult
+   *    （2）将多元可调用对象转换成为1元或是(n-1)元调用对象，既只是绑定部分参数。
+   *    实际上 std::bind 的返回类型是一个 std 内部定义的仿函数类型，在这里就只需要知道它是一个仿函数，
+   *    可以赋值给一个 std::function，这里直接用 std::function 类型来保存 std::bind 的返回值也是可以的。
+   *    其中 std::placeholders::_1 是一个占位符，代表这个位置将在函数调用时，被传入的第一个参数代替。
+   * 4. 所以 map_builder_->AddTrajectoryBuilder 这个函数的第三个参数是一个 std:function 型的。
+   *    这样，在 map_builder_->AddTrajectoryBuilder 内部可以通过如下方式调用 MapBuilderBridge::OnLocalSlamResult
    *    call_func(para1,para2,..., std::function);
    */
   const int trajectory_id = map_builder_->AddTrajectoryBuilder(
@@ -154,17 +163,21 @@ int MapBuilderBridge::AddTrajectory(
   LOG(INFO) << "Added trajectory with ID '" << trajectory_id << "'.";
 
   // Make sure there is no trajectory with 'trajectory_id' yet.
+  // 检查 trajectory_id 确保之前没有使用过
   CHECK_EQ(sensor_bridges_.count(trajectory_id), 0);
+  // 为 trajectory_id 构建一个 SensorBridge 对象。
+  // SensorBridge 是 cartographer_ros 中对于传感器的一个封装，用于将 ROS 的消息转换成 Cartographer 中的传感器数据类型。
   sensor_bridges_[trajectory_id] =
       cartographer::common::make_unique<SensorBridge>(
           trajectory_options.num_subdivisions_per_laser_scan,
           trajectory_options.tracking_frame,
           node_options_.lookup_transform_timeout_sec, tf_buffer_,
           map_builder_->GetTrajectoryBuilder(trajectory_id));
+  // 将轨迹相关的配置保存到容器对象 trajectory_options_ 中并检查
   auto emplace_result =
       trajectory_options_.emplace(trajectory_id, trajectory_options);
   CHECK(emplace_result.second == true);
-  return trajectory_id;
+  return trajectory_id;  // 返回刚刚生成的索引 trajectory_id
 }
 
 void MapBuilderBridge::FinishTrajectory(const int trajectory_id) {
@@ -557,22 +570,29 @@ visualization_msgs::MarkerArray MapBuilderBridge::GetConstraintList() {
   return constraint_list;
 }
 
-// 根据指定的 trajectory_id，返回对应的 SensorBridge 指针
+// 返回 map 容器中 trajectory_id 所对应的 SensorBridge 对象
 SensorBridge* MapBuilderBridge::sensor_bridge(const int trajectory_id) {
   return sensor_bridges_.at(trajectory_id).get();
 }
 
+// OnLocalSlamResult 的目的就是记录下轨迹状态，它有5个参数。前四个参数的意义如注释所示，第五个参数是一个指针似乎没有用到。
+// 其中第四个参数的数据类型 RangeData 是 Cartographer 定义的激光雷达传感器测量数据的存储结构，
+// 它有三个字段，origin 描述了传感器的坐标，returns 和 misses 都是点云数据，分别表示有物体反射和空闲区域。
 void MapBuilderBridge::OnLocalSlamResult(
-    const int trajectory_id, const ::cartographer::common::Time time,
-    const Rigid3d local_pose,
-    ::cartographer::sensor::RangeData range_data_in_local,
+    const int trajectory_id,                                // 轨迹索引
+    const ::cartographer::common::Time time,                // 更新子图的时间
+    const Rigid3d local_pose,                               // 子图的参考位置
+    ::cartographer::sensor::RangeData range_data_in_local,  // 参考位置下的扫描数据
     const std::unique_ptr<const ::cartographer::mapping::
                               TrajectoryBuilderInterface::InsertionResult>) {
+  // 根据输入的参数构建对象 local_slam_data
+  // 它的数据类型 LocalSlamData 是定义在 MapBuilderBridge 内部的结构体，用于记录局部 SLAM 反馈的状态。
   std::shared_ptr<const TrajectoryState::LocalSlamData> local_slam_data =
       std::make_shared<TrajectoryState::LocalSlamData>(
           TrajectoryState::LocalSlamData{time, local_pose,
                                          std::move(range_data_in_local)});
-  cartographer::common::MutexLocker lock(&mutex_);
+  cartographer::common::MutexLocker lock(&mutex_);  // 加锁
+  // 把 local_slam_data 写入容器 trajectory_state_data_ 中
   trajectory_state_data_[trajectory_id] = std::move(local_slam_data);
 }
 
