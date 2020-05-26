@@ -96,20 +96,20 @@ class SensorBridge {
   void HandleImuMessage(const std::string& sensor_id,
                         const sensor_msgs::Imu::ConstPtr& msg);
   /**
-   * @brief HandleLaserScanMessage  处理数据类型为 sensor_msgs::LaserScan 的 激光雷达数据，
-   *                                把 sensor_msgs::LaserScan 类型的数据转化成 carto::sensor::PointCloudWithIntensities 类型
-   * @param sensor_id               sensor_msgs::LaserScan 消息的 topic 名字
-   * @param msg                     sensor_msgs::LaserScan 数据
-   * @return
+   * @brief HandleLaserScanMessage  处理 LaserScan 单线激光扫描消息，消息类型为 sensor_msgs::LaserScan。
+   *                                把 ROS 消息(sensor_msgs::LaserScan)转换成 Cartographer 中的
+   *                                传感器数据类型(carto::sensor::PointCloudWithIntensities)。
+   * @param sensor_id               单线激光扫描消息 laser_scan 的主题，默认名称为 "scan"
+   * @param msg                     单线激光扫描的消息
    */
   void HandleLaserScanMessage(const std::string& sensor_id,
                               const sensor_msgs::LaserScan::ConstPtr& msg);
   /**
-   * @brief HandleMultiEchoLaserScanMessage  处理数据类型为 sensor_msgs::MultiEchoLaserScan 的激光雷达数据，
-   *                                         把 sensor_msgs::MultiEchoLaserScan 类型的数据转化成 carto::sensor::PointCloudWithIntensities 类型
-   * @param sensor_id                        sensor_msgs::MultiEchoLaserScan消息的topic名字
-   * @param msg                              sensor_msgs::MultiEchoLaserScan数据
-   * @return
+   * @brief HandleMultiEchoLaserScanMessage  处理 MultiEchoLaserScan 多线激光扫描消息，消息类型为 sensor_msgs::MultiEchoLaserScan。
+   *                                         把 ROS 消息(sensor_msgs::MultiEchoLaserScan)转换成 Cartographer 中的
+   *                                         传感器数据类型(carto::sensor::PointCloudWithIntensities)。
+   * @param sensor_id                        多线激光扫描消息 multi_echo_laser_scan 的主题，默认名称为 "echoes"
+   * @param msg                              多线激光扫描的消息
    */
   void HandleMultiEchoLaserScanMessage(
       const std::string& sensor_id,

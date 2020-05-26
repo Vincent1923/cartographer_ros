@@ -173,34 +173,35 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
   }
 }
 
-// 处理数据类型为 sensor_msgs::LaserScan 的 激光雷达数据，
-// 把sensor_msgs::LaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型，
-// 并调用SensorBridge::HandleLaserScan()函数来做处理。
+// 处理 LaserScan 单线激光扫描消息，消息类型为 sensor_msgs::LaserScan。
+// 把 ROS 消息(sensor_msgs::LaserScan)转换成 Cartographer 中的传感器数据类型
+// (carto::sensor::PointCloudWithIntensities)。最后调用成员函数 HandleLaserScan() 来处理转换后的点云数据。
 void SensorBridge::HandleLaserScanMessage(
     const std::string& sensor_id, const sensor_msgs::LaserScan::ConstPtr& msg) {
-  carto::sensor::PointCloudWithIntensities point_cloud;  // 点云数据，包含3D位置，时间，以及 intensities
-  carto::common::Time time;  // 一帧雷达消息 msg 中获取最后一个测距点的时间
-  /*
-   * （1）ToPointCloudWithIntensities() 函数将ROS消息转换为点云，并且返回一帧 scan 数据中最后一个测距点的时间。
-   * （2）point_cloud 表示点云信息，包含3D位置，时间，以及 intensities。
-   *     point_cloud.point 表示点云数据，前三个元素为3D坐标，第四个元素表示时间，这是相对于获取最后一个点的时间。
-   *     从第一个点开始，每一个点的时间逐渐增加，而最后一个点的第四个元素为0，所以前面的点的时间都为负数。
-   *     point_cloud.intensities 表示测距点的强度。
-   * （3）time 表示获取最后一个测距点的时间。
-   */
+  // 首先定义两个临时变量分别用于记录转换之后的点云数据和时间戳
+  carto::sensor::PointCloudWithIntensities point_cloud;  // 转换之后的点云数据，包含3D位置，相对测量时间和强度
+  carto::common::Time time;                              // 转换之后的时间戳，这是获取最后一个扫描点的时间
+  // 通过函数 ToPointCloudWithIntensities()，将 ROS 的消息转换成 Cartographer 定义的点云数据。
+  // 并且返回获取最后一个扫描点的时间（与 ROS 时间戳不同）。
   std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
+  // 通过成员函数 HandleLaserScan() 来处理点云数据
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 
-// 处理数据类型为 sensor_msgs::MultiEchoLaserScan 的激光雷达数据，
-// 把sensor_msgs::MultiEchoLaserScan类型的数据转化成carto::sensor::PointCloudWithIntensities类型，
-// 并调用SensorBridge::HandleLaserScan()函数来做处理。
+// 处理 MultiEchoLaserScan 多线激光扫描消息，消息类型为 sensor_msgs::MultiEchoLaserScan。
+// 把 ROS 消息(sensor_msgs::MultiEchoLaserScan)转换成 Cartographer 中的
+// 传感器数据类型(carto::sensor::PointCloudWithIntensities)。
+// 最后调用成员函数 HandleLaserScan() 来处理转换后的点云数据。
 void SensorBridge::HandleMultiEchoLaserScanMessage(
     const std::string& sensor_id,
     const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg) {
-  carto::sensor::PointCloudWithIntensities point_cloud;  // 点云数据，包含3D位置，时间，以及 intensities
-  carto::common::Time time;
-  std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);  // 将ROS消息转换为点云
+  // 首先定义了两个临时变量分别用于记录转换之后的点云数据和时间戳。
+  carto::sensor::PointCloudWithIntensities point_cloud;  // 转换之后的点云数据，包含3D位置，相对测量时间和强度
+  carto::common::Time time;                              // 转换之后的时间戳，这是获取最后一个扫描点的时间
+  // 通过函数 ToPointCloudWithIntensities()，将 ROS 的消息转换成 Cartographer 定义的点云数据。
+  // 并且返回获取最后一个扫描点的时间（与 ROS 时间戳不同）。
+  std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
+  // 通过成员函数 HandleLaserScan() 来处理点云数据
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 

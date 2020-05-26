@@ -53,17 +53,31 @@ geometry_msgs::Point ToGeometryMsgPoint(const Eigen::Vector3d& vector3d);
 // Converts ROS message to point cloud. Returns the time when the last point
 // was acquired (different from the ROS timestamp). Timing of points is given in
 // the fourth component of each point relative to `Time`.
+// 将 ROS 消息转换为点云。返回获取最后一点的时间（与 ROS 时间戳不同）。相对于 "Time"，每个点的第四部分给出了点的计时。
 /**
- * @brief ToPointCloudWithIntensities  将类型为 sensor_msgs::LaserScan 的激光雷达消息转换为点云，这是通过每一点的测距距离 ranges[i] 进行计算的。
- *                                     并且返回获取最后一点的时间（与ROS时间戳不同）。相对于“Time”，每个点的第四个元素给出了点的计时。
- * @param msg                          订阅的类型为 sensor_msgs::LaserScan 的激光雷达数据
- * @return                             数据类型为 cartographer::sensor::PointCloudWithIntensities 的点云数据，包含3D位置，时间，以及 intensities。
- *                                     数据类型为 cartographer::common::Time 的时间信息，这是一帧雷达数据 msg 中获取最后一个测距点的时间。
+ * @brief ToPointCloudWithIntensities  处理 LaserScan 单线激光扫描消息。消息类型为 sensor_msgs::LaserScan。
+ *                                     把 ROS 消息(sensor_msgs::LaserScan)转换成 Cartographer 中的
+ *                                     传感器数据类型(carto::sensor::PointCloudWithIntensities)。
+ *                                     主要工作就是根据 ROS 的消息内容，计算扫描到的障碍物在工作空间中的坐标位置，并将其保存在一个特定的数据结构中。
+ *                                     并且返回获取最后一个扫描点的时间（与 ROS 时间戳不同）。
+ * @param msg                          单线激光扫描的消息
+ * @return PointCloudWithIntensities   转换之后的点云数据，Cartographer 定义的点云数据，带相对测量时间和强度
+ *         Time                        转换之后的时间戳，这是一帧雷达消息 msg 中获取最后一个扫描点的时间
  */
 std::tuple<::cartographer::sensor::PointCloudWithIntensities,
            ::cartographer::common::Time>
 ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg);
 
+/**
+ * @brief ToPointCloudWithIntensities  处理 MultiEchoLaserScan 多线激光扫描消息。消息类型为 sensor_msgs::MultiEchoLaserScan。
+ *                                     把 ROS 消息(sensor_msgs::MultiEchoLaserScan)转换成 Cartographer 中的
+ *                                     传感器数据类型(carto::sensor::PointCloudWithIntensities)。
+ *                                     主要工作就是根据 ROS 的消息内容，计算扫描到的障碍物在工作空间中的坐标位置，并将其保存在一个特定的数据结构中。
+ *                                     并且返回获取最后一个扫描点的时间（与 ROS 时间戳不同）。
+ * @param msg                          多线激光扫描的消息
+ * @return PointCloudWithIntensities   转换之后的点云数据，Cartographer 定义的点云数据，带相对测量时间和强度
+ *         Time                        转换之后的时间戳，这是一帧雷达消息 msg 中获取最后一个扫描点的时间
+ */
 std::tuple<::cartographer::sensor::PointCloudWithIntensities,
            ::cartographer::common::Time>
 ToPointCloudWithIntensities(const sensor_msgs::MultiEchoLaserScan& msg);

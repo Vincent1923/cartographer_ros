@@ -863,7 +863,10 @@ void Node::HandleMultiEchoLaserScanMessage(
   if (!sensor_samplers_.at(trajectory_id).rangefinder_sampler.Pulse()) {
     return;
   }
-  // 通过 map_builder_bridge_ 将传感器数据喂给 Cartographer
+  // 通过 map_builder_bridge_ 将传感器数据喂给 Cartographer。
+  // 通过轨迹索引 trajectory_id 从 map_builder_bridge_ 对象中查询获得对应轨迹的 SensorBridge 对象，
+  // 并通过该对象的 HandleMultiEchoLaserScanMessage() 函数来处理雷达数据。
+  // 值得注意的是，map_builder_bridge_ 的成员变量为 sensor_bridges_，它在函数 AddTrajectory() 完成初始化。
   map_builder_bridge_.sensor_bridge(trajectory_id)
       ->HandleMultiEchoLaserScanMessage(sensor_id, msg);
 }

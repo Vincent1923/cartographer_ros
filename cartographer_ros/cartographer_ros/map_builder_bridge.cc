@@ -305,7 +305,7 @@ MapBuilderBridge::GetTrajectoryStates() {
         continue;
       }
       // 存在则获取路径 trajectory_id 的 local_slam_data 数据
-      local_slam_data = trajectory_state_data_.at(trajectory_id); 
+      local_slam_data = trajectory_state_data_.at(trajectory_id);
     }
 
     // Make sure there is a trajectory with 'trajectory_id'.

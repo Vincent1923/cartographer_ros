@@ -111,27 +111,48 @@ float GetFirstEcho(const sensor_msgs::LaserEcho& echo) {
 template <typename LaserMessageType>
 std::tuple<PointCloudWithIntensities, ::cartographer::common::Time>
 LaserScanToPointCloudWithIntensities(const LaserMessageType& msg) {
+  // 先检查输入的数据是否合法
   CHECK_GE(msg.range_min, 0.f);            // 检查 msg.range_min 是否大于0
   CHECK_GE(msg.range_max, msg.range_min);  // 检查 msg.range_max 是否大于 msg.range_min
   if (msg.angle_increment > 0.f) {
-    CHECK_GT(msg.angle_max, msg.angle_min);  // 若每次扫描的角度增量为正数，则检查 msg.angle_max 是否大于 msg.angle_min
+    // 若每次扫描的角度增量为正数，则检查 msg.angle_max 是否大于 msg.angle_min
+    CHECK_GT(msg.angle_max, msg.angle_min);
   } else {
-    CHECK_GT(msg.angle_min, msg.angle_max);  // 若每次扫描的角度增量为负数，则检查 msg.angle_min 是否大于 msg.angle_max
+    // 若每次扫描的角度增量为负数，则检查 msg.angle_min 是否大于 msg.angle_max
+    CHECK_GT(msg.angle_min, msg.angle_max);
   }
-  PointCloudWithIntensities point_cloud;  // 返回的带有 intensities 的点云，point_cloud.point 的前三个元素表示3D坐标，第四个元素表示时间
-  float angle = msg.angle_min;  // angle 表示每次扫描的角度，范围为 angle_min 到 angle_max，每次增加 angle_increment
+  // 创建一个局部的对象 point_cloud 用于记录转换之后的点云数据
+  PointCloudWithIntensities point_cloud;  // 转换之后的点云数据，带相对测量时间和强度
+  // angle 表示每次扫描的角度，范围为 angle_min 到 angle_max，每次增加 angle_increment
+  float angle = msg.angle_min;
+  // for 循环从最小的扫描角度开始，依次计算各个测量数据在机器人坐标系下的坐标点和数据强度，
+  // 并将之添加到对象 point_cloud 中。
   for (size_t i = 0; i < msg.ranges.size(); ++i) {  // 遍历每一帧扫描的数据
     const auto& echoes = msg.ranges[i];
-    // 如果 msg 类型为 sensor_msgs::LaserScan，则函数 HasEcho(echoes) 直接返回 true，函数 GetFirstEcho(echoes) 直接返回 echoes
+    /**
+     * 1. 对于每一个扫描数据，我们都先通过函数 HasEcho() 检查一下。这个函数定义在源文件 "msg_conversion.cc" 中，
+     *    它有两个重载版本，分别应用于 LaserScan 和 MultiEchoLaserScan。
+     *    对于 LaserScan 的 ROS 消息这个函数将总是返回 true，对于 MultiEchoLaserScan 则检查字段 ranges 是否为空。
+     * 2. 如果存在测量数据，则通过函数 GetFirstEcho() 获取第一个扫描数据。
+     *    对于 LaserScan 直接返回测量数据，对于 MultiEchoLaserScan 则返回第一个测量数据。
+     */
     if (HasEcho(echoes)) {
       const float first_echo = GetFirstEcho(echoes);  // first_echo 为每次扫描的测距数据
+      // 检查一下测量数据是否在测量范围内
       if (msg.range_min <= first_echo && first_echo <= msg.range_max) {
-        const Eigen::AngleAxisf rotation(angle, Eigen::Vector3f::UnitZ());  // 定义旋转角度为 angle 的旋转向量
+        // 一般我们使用激光雷达都是让它水平的扫描一个平面，所以下面构造一个沿机器人 Z 轴旋转的旋转向量，旋转角度为 angle
+        const Eigen::AngleAxisf rotation(angle, Eigen::Vector3f::UnitZ());
+        // 临时变量 point 表示扫描点 first_echo 相对于 laser 的 3D 坐标，带有相对测量时间。
+        // 它的前三个元素是 3D 坐标，第四个元素是扫描点相对于这一帧扫描的第一个扫描点的时间。
         Eigen::Vector4f point;
-        // point 的前三个元素表示扫描点 first_echo 相对于 laser 的3D坐标，第四个元素为扫描点 first_echo 相对于这一帧扫描的第一个扫描点的时间
-        point << rotation * (first_echo * Eigen::Vector3f::UnitX()),  // 计算坐标点(first_echo, 0, 0) 经过 rotation 旋转后的坐标
+        // 在 Cartographer 中，X 轴的正方向是机器人的前进方向。所以下面通过 first_echo 构建一个 X 轴方向上的运动矢量，
+        // 并左乘旋转矩阵 rotation 就可以得到扫描点在机器人坐标系下的坐标。
+        // 逗号之后的部分 i * msg.time_increment 是测量数据产生的时间，这个时间是相对于第一个扫描点的。
+        point << rotation * (first_echo * Eigen::Vector3f::UnitX()),  // 计算坐标点 (first_echo, 0, 0) 经过 rotation 旋转后的坐标
             i * msg.time_increment;
         point_cloud.points.push_back(point);
+        // 在计算扫描点坐标的同时，还需要检查一下是否提供了数据强度。
+        // 如果提供了这一数据，就将该数据填充到局部对象 point_cloud 中，否则写0。
         if (msg.intensities.size() > 0) {
           CHECK_EQ(msg.intensities.size(), msg.ranges.size());
           const auto& echo_intensities = msg.intensities[i];
@@ -142,18 +163,25 @@ LaserScanToPointCloudWithIntensities(const LaserMessageType& msg) {
         }
       }
     }
+    // 在 for 循环的最后，增加 angle 获取下一个测量数据所对应的扫描角度。
     angle += msg.angle_increment;  // 每次扫描增加的角度
   }
-  ::cartographer::common::Time timestamp = FromRos(msg.header.stamp);  // 返回的时间，表示一帧雷达消息 msg 中获取最后一个测距点的时间
+  // Cartographer 中的时间戳是以数据采样结束为参考的。
+  // 所以这里的时间戳以最后一个测量数据为基准，point_cloud 中所有的测量点都偏移了一段时间。
+  // 临时变量 timestamp 记录返回的时间戳，表示一帧雷达消息 msg 中获取最后一个扫描点的时间
+  ::cartographer::common::Time timestamp = FromRos(msg.header.stamp);
   if (!point_cloud.points.empty()) {
-    const double duration = point_cloud.points.back()[3];  // duration 为一帧最后一个扫描点的时间
+    // duration 为一帧扫描数据最后一个扫描点相对于第一个扫描点的时间，即一帧数据总的时间间隔
+    const double duration = point_cloud.points.back()[3];
+    // 计算获取最后一个扫描点的时间，并记录在 timestamp
     timestamp += cartographer::common::FromSeconds(duration);
-    // point_cloud.points 表示一帧点云数据，每一个点的第四个元素表示时间，这是相对于获取最后一个点的时间。
+    // 经过下面 for 循环的计算后，point_cloud.points 表示一帧点云数据，每一个点的第四个元素表示时间，这是相对于获取最后一个点的时间。
     // 从第一个点开始，每一个点的时间逐渐增加，而最后一个点的第四个元素为0，所以前面的点的时间都为负数。
     for (Eigen::Vector4f& point : point_cloud.points) {
       point[3] -= duration;
     }
   }
+  // 最后返回填充好的点云数据 point_cloud 和调整后的时间戳 timestamp
   return std::make_tuple(point_cloud, timestamp);
 }
 
@@ -183,24 +211,26 @@ sensor_msgs::PointCloud2 ToPointCloud2Message(
   return msg;
 }
 
-/*
-  * （1）将类型为 sensor_msgs::LaserScan 的激光雷达消息转换为点云，这是通过每一点的测距距离 ranges[i] 进行计算的。
-  *     并且返回获取最后一点的时间（与ROS时间戳不同）。相对于“Time”，每个点的第四个元素给出了点的计时。
-  * （2）返回的 cartographer::sensor::PointCloudWithIntensities 数据类型表示点云信息，包含3D位置，时间，以及 intensities。
-  *     其中 point 表示点云数据，前三个元素为3D坐标，第四个元素表示时间，这是相对于获取最后一个点的时间。
-  *     从第一个点开始，每一个点的时间逐渐增加，而最后一个点的第四个元素为0，所以前面的点的时间都为负数。
-  *     而 intensities 表示测距点的强度。
-  * （3）cartographer::common::Time 表示获取最后一个测距点的时间。
-  */
+// 处理 LaserScan 单线激光扫描消息。消息类型为 sensor_msgs::LaserScan。
+// 把 ROS 消息(sensor_msgs::LaserScan)转换成 Cartographer 中的传感器数据类型(carto::sensor::PointCloudWithIntensities)。
+// 主要工作就是根据 ROS 的消息内容，计算扫描到的障碍物在工作空间中的坐标位置，并将其保存在一个特定的数据结构中。
+// 并且返回获取最后一个扫描点的时间（与 ROS 时间戳不同）。
 std::tuple<::cartographer::sensor::PointCloudWithIntensities,
            ::cartographer::common::Time>
 ToPointCloudWithIntensities(const sensor_msgs::LaserScan& msg) {
+  // 调用了模板函数 LaserScanToPointCloudWithIntensities() 把 ROS 消息转换成 Cartographer 中的传感器数据类型
   return LaserScanToPointCloudWithIntensities(msg);
 }
 
+// 处理 MultiEchoLaserScan 多线激光扫描消息。消息类型为 sensor_msgs::MultiEchoLaserScan。
+// 把 ROS 消息(sensor_msgs::MultiEchoLaserScan)转换成 Cartographer 中的
+// 传感器数据类型(carto::sensor::PointCloudWithIntensities)。
+// 主要工作就是根据 ROS 的消息内容，计算扫描到的障碍物在工作空间中的坐标位置，并将其保存在一个特定的数据结构中。
+// 并且返回获取最后一个扫描点的时间（与 ROS 时间戳不同）。
 std::tuple<::cartographer::sensor::PointCloudWithIntensities,
            ::cartographer::common::Time>
 ToPointCloudWithIntensities(const sensor_msgs::MultiEchoLaserScan& msg) {
+  // 调用了模板函数 LaserScanToPointCloudWithIntensities() 把 ROS 消息转换成 Cartographer 中的传感器数据类型
   return LaserScanToPointCloudWithIntensities(msg);
 }
 
