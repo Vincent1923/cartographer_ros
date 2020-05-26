@@ -127,25 +127,24 @@ class SensorBridge {
 
  private:
   /**
-   * @brief HandleLaserScan  根据 num_subdivisions_per_laser_scan_ 的大小，对一帧点云数据 points 进行划分。
-   *                         把 carto::sensor::PointCloudWithIntensities 类型的数据转化成 carto::sensor::TimedPointCloud 类型
-   * @param sensor_id        LaserScan 消息的 topic 名字
-   * @param start_time       一帧点云数据 points 的最后一个点的时间
-   * @param frame_id         LaserScan 消息的 frame_id
-   * @param points           LaserScan 消息转化成 carto::sensor::PointCloudWithIntensities 类型后的数据，输入的一帧点云数据
-   * @return
+   * @brief HandleLaserScan  处理从 ROS 激光扫描消息转换过来的 Cartographer 定义的点云数据，将转换后的数据喂给 Cartographer 进行后序的处理。
+   *                         根据 num_subdivisions_per_laser_scan_ 的大小，对一帧点云数据 points 进行划分。
+   *                         把 carto::sensor::PointCloudWithIntensities 类型的数据转换成 carto::sensor::TimedPointCloud 类型
+   * @param sensor_id        激光雷达消息的主题，例如单线激光扫描消息 LaserScan 的默认主题名称为 "scan"
+   * @param start_time       一帧点云数据的时间戳，这是获取最后一个扫描点的时间
+   * @param frame_id         激光雷达消息的坐标系名称
+   * @param points           转换之后的 Cartographer 定义的点云数据，从 ROS 消息转换而来，带有相对测量时间和强度
    */
   void HandleLaserScan(
       const std::string& sensor_id, ::cartographer::common::Time start_time,
       const std::string& frame_id,
       const ::cartographer::sensor::PointCloudWithIntensities& points);
   /**
-   * @brief HandleRangefinder  处理测距仪数据
-   * @param sensor_id          测距仪消息的 topic 名字
-   * @param time               输入的一帧点云数据 ranges 的最后一个点的时间
-   * @param frame_id           测距仪消息的 frame_id
-   * @param ranges             输入的一帧点云数据
-   * @return
+   * @brief HandleRangefinder  处理测距仪数据，将数据喂给 Cartographer 进行后序的处理。
+   * @param sensor_id          测距仪消息的主题名称
+   * @param time               一帧点云数据的时间戳，这是获取最后一个数据点的时间
+   * @param frame_id           测距仪消息的坐标系名称
+   * @param ranges             Cartographer 定义的点云数据，带有相对测量时间
    */
   void HandleRangefinder(const std::string& sensor_id,
                          ::cartographer::common::Time time,

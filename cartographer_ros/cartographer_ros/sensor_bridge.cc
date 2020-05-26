@@ -222,43 +222,50 @@ void SensorBridge::HandlePointCloud2Message(
 
 const TfBridge& SensorBridge::tf_bridge() const { return tf_bridge_; }
 
-/*
- * （1）根据 num_subdivisions_per_laser_scan_ 的大小，对一帧点云数据 points 进行划分。
- *     例如，若 num_subdivisions_per_laser_scan_ = 1，则不进行划分；
- *     若 num_subdivisions_per_laser_scan_ = 2，则把点云数据划分为两等份，后面以此类推。
- * （2）把 carto::sensor::PointCloudWithIntensities 类型的数据转化成 carto::sensor::TimedPointCloud 类型，
- *     并调用SensorBridge::HandleRangefinder()函数来做处理。
- */
+// 处理从 ROS 激光扫描消息转换过来的 Cartographer 定义的点云数据，将转换后的数据喂给 Cartographer 进行后序的处理。
+// 根据 num_subdivisions_per_laser_scan_ 的大小，对一帧点云数据 points 进行划分。
+// 把 carto::sensor::PointCloudWithIntensities 类型的数据转换成 carto::sensor::TimedPointCloud 类型。
 void SensorBridge::HandleLaserScan(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id,
     const carto::sensor::PointCloudWithIntensities& points) {
+  // 先确认一下输入的点云非空
   if (points.points.empty()) {
     return;
   }
-  CHECK_LE(points.points.back()[3], 0);  // 检查一帧点云中最后一个点的时间是否小于或等于0
+  // 检查一帧点云中最后一个点的时间是否小于或等于0
+  CHECK_LE(points.points.back()[3], 0);
   // TODO(gaschler): Use per-point time instead of subdivisions.
+  // 根据配置变量 num_subdivisions_per_laser_scan_ 在一个 for 循环中将点云数据拆分为若干段。
   // 对于 sensor_msgs::LaserScan 消息，num_subdivisions_per_laser_scan_ = 1
   for (int i = 0; i != num_subdivisions_per_laser_scan_; ++i) {
+    // 计算分段的起始索引
     const size_t start_index =  // 对于 sensor_msgs::LaserScan 消息，start_index = 0
         points.points.size() * i / num_subdivisions_per_laser_scan_;
+    // 计算分段的结束索引
     const size_t end_index =  // 对于 sensor_msgs::LaserScan 消息，end_index = 360，等于 range.size()
         points.points.size() * (i + 1) / num_subdivisions_per_laser_scan_;
-    // subdivision 表示经过划分后的包含时间信息的一帧点云数据。
+    // 构建分段数据。临时变量 subdivision 记录经过划分后的包含时间信息的一帧点云数据。
     // 若 num_subdivisions_per_laser_scan_ = 1，则 subdivision 为输入的一帧点云数据。
     carto::sensor::TimedPointCloud subdivision(
         points.points.begin() + start_index, points.points.begin() + end_index);
+    // 以下是为了跳过同一个分段中的元素
     if (start_index == end_index) {
       continue;
     }
-    // time_to_subdivision_end 表示经过划分后的点云 subdivision 的最后一个点的时间，这个时间是相对于一帧点云的最后一个点的相对时间。
+    // 接着参考分段中最后一个数据的时间调整其他数据的时间，但在该操作之前需要先确认当前的数据没有过时。
+    // time_to_subdivision_end 记录分段数据 subdivision 最后一个点的时间，这个时间是相对于输入的一帧点云数据的最后一个点的相对时间。
     // 若 num_subdivisions_per_laser_scan_ = 1，则 time_to_subdivision_end = 0
     const double time_to_subdivision_end = subdivision.back()[3];
     // `subdivision_time` is the end of the measurement so sensor::Collator will
     // send all other sensor data first.
-    // subdivision_time 表示 subdivision 中最后一个点的时间，这个时间为实际时间，不是相对时间
+    // 计算分段数据 subdivision 最后一个点的时间戳。
+    // subdivision_time 记录 subdivision 最后一个点的时间戳，这个时间为实际时间，不是相对时间。
     const carto::common::Time subdivision_time =
         time + carto::common::FromSeconds(time_to_subdivision_end);
+    // 检查当前的数据是否过时。
+    // 成员容器 sensor_to_previous_subdivision_time_ 中以 sensor_id 为索引记录了最新的数据产生时间，
+    // 如果分段的时间落后于记录值，将抛弃所对应的数据。
     auto it = sensor_to_previous_subdivision_time_.find(sensor_id);
     if (it != sensor_to_previous_subdivision_time_.end() &&
         it->second >= subdivision_time) {
@@ -268,32 +275,35 @@ void SensorBridge::HandleLaserScan(
                    << subdivision_time;
       continue;
     }
+    // 更新传感器 sensor_id 最新数据的时间
     sensor_to_previous_subdivision_time_[sensor_id] = subdivision_time;
-    // 把 subdivision 的最后一个点的时间变成0，其它点的时间换算成相对于 subdivision 的最后一个点的相对时间。
+    // 调整分段数据 subdivision 每一个点的时间。
+    // 即把分段数据 subdivision 最后一个点的时间变成0，其它点的时间换算成相对于 subdivision 的最后一个点的相对时间。
     for (Eigen::Vector4f& point : subdivision) {
       point[3] -= time_to_subdivision_end;
     }
     CHECK_EQ(subdivision.back()[3], 0);  // 检查点云 subdivision 的最后一个点的时间是否为0
+    // 调用函数 HandleRangefinder() 将分段数据喂给 Cartographer
     HandleRangefinder(sensor_id, subdivision_time, frame_id, subdivision);
   }
 }
 
-// 处理测距仪数据。
-// HandleRangefinder 函数调用了 trajectory_builder_->AddSensorData 来处理。
+// 处理测距仪数据，将数据喂给 Cartographer 进行后序的处理。
+// HandleRangefinder() 函数调用了 trajectory_builder_->AddSensorData() 来处理。
 // 所以这里相当于做了一层抽象。我们的 Rangefinder 可以不一样是激光，也可以是其他类型的传感器，比如 Kinect。
 // 这样，以后如果要扩展或修改，我们可以不改之前的代码，而只需要多写一个处理 Kinect 的代码就可以。这也是封装的好处。
 void SensorBridge::HandleRangefinder(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id, const carto::sensor::TimedPointCloud& ranges) {
-  // 获取 frame_id 相对于 tracking_frame_ 的变换矩阵，这是在 tracking_frame_ 的坐标系下的，
-  // 即获取 frame_id 在 tracking_frame_ 坐标系下的位姿。
-  // 这里的 frame_id 一般为 “laser_link”，而 tracking_frame_ 一般为 “base_link” 或 “base_footprint”，
-  // 即获取激光雷达相对于机器人中心的位姿。
+  // 通过 tf_bridge_ 对象查询传感器坐标系相对于机器人坐标系之间的坐标变换，记录在对象 sensor_to_tracking 中。
+  // frame_id 是传感器坐标系名称，例如单线激光扫描消息一般为 "laser_link"。
+  // tracking_frame_ 是机器人坐标系名称，一般为 "base_link" 或 "base_footprint"。
   const auto sensor_to_tracking =
       tf_bridge_.LookupToTracking(time, CheckNoLeadingSlash(frame_id));
   if (sensor_to_tracking != nullptr) {
-    // 调用 trajectory_builder_->AddSensorData 函数对点云数据进行处理。
-    // TransformTimedPointCloud 函数把 frame_id 坐标系下的点云数据 ranges，变换到 tracking_frame_ 坐标系下。
+    // 调用 trajectory_builder_->AddSensorData() 函数把点云数据喂给 Cartographer 进行后序的处理。
+    // TransformTimedPointCloud() 函数把传感器坐标系(frame_id)下的点云数据 ranges
+    // 变换到机器人坐标系(tracking_frame_)下。
     trajectory_builder_->AddSensorData(
         sensor_id, carto::sensor::TimedPointCloudData{
                        time, sensor_to_tracking->translation().cast<float>(),
