@@ -129,9 +129,11 @@ void SensorBridge::HandleLandmarkMessage(
   trajectory_builder_->AddSensorData(sensor_id, ToLandmarkData(*msg));
 }
 
-// 数据预处理函数，处理IMU数据，返回的是经过变换后的IMU数据。并非SensorBridge的成员函数。
+// 把 ROS 的 IMU 消息转换成 Cartographer 的 ImuData 数据类型，最后返回的 ImuData 数据是相对于机器人坐标系下
 std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
     const sensor_msgs::Imu::ConstPtr& msg) {
+  // 先检查线加速度和角速度的协方差矩阵的第一个元素。
+  // 根据 ROS 系统的定义，如果协方差矩阵的第一个元素为 -1 意味着所对应的传感器数据无效。
   CHECK_NE(msg->linear_acceleration_covariance[0], -1)
       << "Your IMU data claims to not contain linear acceleration measurements "
          "by setting linear_acceleration_covariance[0] to -1. Cartographer "
@@ -143,29 +145,40 @@ std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
          "requires this data to work. See "
          "http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html.";
 
+  // 将 ROS 消息头中的时间戳转换成 Cartographer 中的时间
   const carto::common::Time time = FromRos(msg->header.stamp);
+  // 通过坐标变换对象 tf_bridge_ 从 ROS 系统中查询 IMU 传感器相对于机器人坐标系的坐标变换关系
+  // 返回的变换关系 sensor_to_tracking 的数据类型是 cartographer::transform::Rigid3d 的指针对象
   const auto sensor_to_tracking = tf_bridge_.LookupToTracking(
       time, CheckNoLeadingSlash(msg->header.frame_id));
   if (sensor_to_tracking == nullptr) {
     return nullptr;
   }
+  // 检查 IMU 坐标系相对于机器人坐标系的平移距离，以保证 IMU 坐标系原点应当尽量与机器人坐标系重合。
+  // 否则，将传感器测量的线加速度转换到机器人坐标系下就会出现比较大的偏差，对于位姿估计而言是不利的。
   CHECK(sensor_to_tracking->translation().norm() < 1e-5)
       << "The IMU frame must be colocated with the tracking frame. "
          "Transforming linear acceleration into the tracking frame will "
          "otherwise be imprecise.";
+  // 检查通过之后，就可以构建一个 ImuData 的对象，将经过坐标变换的传感器数据填充到该对象中，并返回。
   return carto::common::make_unique<carto::sensor::ImuData>(
       carto::sensor::ImuData{
           time,
+          // 函数 sensor_to_tracking->rotation() 返回变换关系的旋转矩阵，类型为 Eigen::Quaternion<double>
+          // 左乘旋转矩阵是把 IMU 传感器坐标系下的线加速度和角加速度变换到机器人坐标系下。
+          // 函数 ToEigen() 把 ROS 的消息类型 geometry_msgs/Vector3 转换为 Eigen 库的类型 Eigen::Vector3d
           sensor_to_tracking->rotation() * ToEigen(msg->linear_acceleration),
           sensor_to_tracking->rotation() * ToEigen(msg->angular_velocity)});
 }
 
-// 处理IMU数据
+// 处理 IMU 消息，消息类型为 sensor_msgs::Imu。
+// 首先把 ROS 的 IMU 消息转换成 Cartographer 的 ImuData 数据类型，最后把转换后的数据喂给轨迹跟踪器。
 void SensorBridge::HandleImuMessage(const std::string& sensor_id,
                                     const sensor_msgs::Imu::ConstPtr& msg) {
+  // 调用函数 ToImuData() 把 ROS 的 IMU 消息转换成 Cartographer 的 ImuData 数据类型
   std::unique_ptr<carto::sensor::ImuData> imu_data = ToImuData(msg);
   if (imu_data != nullptr) {
-    // 最终，将线加速度和角加速度传入trajectory_builder_->AddSensorData做处理
+    // 直接通过轨迹跟踪器的接口 AddSensorData() 填塞数据
     trajectory_builder_->AddSensorData(
         sensor_id,
         carto::sensor::ImuData{imu_data->time, imu_data->linear_acceleration,

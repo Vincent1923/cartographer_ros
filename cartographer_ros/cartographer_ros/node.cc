@@ -823,7 +823,10 @@ void Node::HandleImuMessage(const int trajectory_id,
   if (!sensor_samplers_.at(trajectory_id).imu_sampler.Pulse()) {
     return;
   }
+  // 通过 map_builder_bridge_ 对象的接口获取当前跟踪轨迹所用的 SensorBridge 对象
   auto sensor_bridge_ptr = map_builder_bridge_.sensor_bridge(trajectory_id);
+  // 通过该 SensorBridge 对象将 ROS 的系统消息转换成 Cartographer 的 ImuData 数据类型，
+  // 以下是通过 C++11 的 auto 关键字自动分析数据类型，转换之后的数据类型为 carto::sensor::ImuData。
   auto imu_data_ptr = sensor_bridge_ptr->ToImuData(msg);
   if (imu_data_ptr != nullptr) {
     // 将 IMU 数据喂给位姿估计器 extrapolators_
@@ -831,7 +834,7 @@ void Node::HandleImuMessage(const int trajectory_id,
     // 在函数 AddTrajectory() 中通过调用 AddExtrapolator() 完成初始化操作。
     extrapolators_.at(trajectory_id).AddImuData(*imu_data_ptr);
   }
-  // 通过 map_builder_bridge_ 将传感器数据喂给 Cartographer
+  // 最后通过 SensorBridge 对象将数据喂给 Cartographer
   sensor_bridge_ptr->HandleImuMessage(sensor_id, msg);
 }
 

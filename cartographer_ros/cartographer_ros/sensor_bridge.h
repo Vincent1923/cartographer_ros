@@ -81,16 +81,17 @@ class SensorBridge {
       const cartographer_ros_msgs::LandmarkList::ConstPtr& msg);
 
   /**
-   * @brief ToImuData  数据预处理函数，处理IMU数据，返回的是经过变换后的IMU数据
-   * @param msg        IMU数据
-   * @return           相对于tracking_frame坐标系下的IMU数据
+   * @brief ToImuData  把 ROS 的 IMU 消息转换成 Cartographer 的 ImuData 数据类型，最后返回的 ImuData 数据是相对于机器人坐标系下
+   * @param msg        IMU 消息
+   * @return           Cartographer 的 ImuData 数据，相对于机器人坐标系下
    */
   std::unique_ptr<::cartographer::sensor::ImuData> ToImuData(
       const sensor_msgs::Imu::ConstPtr& msg);
   /**
-   * @brief HandleImuMessage  处理IMU消息
-   * @param sensor_id         sensor_msgs::Imu消息的topic名字
-   * @param msg               IMU数据
+   * @brief HandleImuMessage  处理 IMU 消息，消息类型为 sensor_msgs::Imu。
+   *                          首先把 ROS 的 IMU 消息转换成 Cartographer 的 ImuData 数据类型，最后把转换后的数据喂给轨迹跟踪器。
+   * @param sensor_id         IMU 消息的主题名称，默认名称为 "imu"
+   * @param msg               IMU 消息
    * @return
    */
   void HandleImuMessage(const std::string& sensor_id,
