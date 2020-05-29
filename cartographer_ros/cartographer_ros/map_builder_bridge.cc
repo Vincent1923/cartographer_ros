@@ -131,7 +131,7 @@ void MapBuilderBridge::LoadState(const std::string& state_filename,
   map_builder_->LoadState(&stream, load_frozen_state);
 }
 
-// 添加一条trajectory
+// 开始一条新的轨迹跟踪，并返回新建轨迹的索引
 int MapBuilderBridge::AddTrajectory(
     const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>&
         expected_sensor_ids,
@@ -139,7 +139,7 @@ int MapBuilderBridge::AddTrajectory(
   /**
    * 1. 通知 map_builder_ 对象添加一个轨迹跟踪器，同时将构建成功的索引返回保存在局部变量 trajectory_id 中。
    * 2. 有三个输入参数：
-   *    expected_sensor_ids 为订阅的传感器主题名称的集合；
+   *    expected_sensor_ids 订阅的所有传感器主题名称和类型的集合；
    *    trajectory_options.trajectory_builder_options 是轨迹跟踪器的配置信息；
    *    第三个参数比较重要，看字面意思，它相当于注册了一个回调函数 OnLocalSlamResult，
    *    用于响应 map_builder_ 完成一个局部 SLAM 或者说是成功构建了一个子图的事件。

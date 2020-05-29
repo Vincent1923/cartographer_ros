@@ -85,10 +85,11 @@ class MapBuilderBridge {
    */
   void LoadState(const std::string& state_filename, bool load_frozen_state);
   /**
-   * @brief AddTrajectory        添加一条trajectory
-   * @param expected_sensor_ids  一条trajectory所期望的SensorIds集合
-   * @param trajectory_options   跟trajectory相关的参数配置，如tracking_frame，published_frame等等
-   * @return                     增加的trajectory的id
+   * @brief AddTrajectory        开始一条新的轨迹跟踪，并返回新建轨迹的索引
+   * @param expected_sensor_ids  Cartographer ROS 订阅的所有传感器主题名称和类型的集合。结构体 SensorId 有两个字段，
+   *                             type 通过枚举描述了传感器的类型，id 是一个字符串记录了传感器所对应的 ROS 主题名称。
+   * @param trajectory_options   轨迹的配置参数，在 "node_main.cc" 中由函数 Run 从配置文件中获取
+   * @return                     新建轨迹的索引
    */
   int AddTrajectory(
       const std::set<

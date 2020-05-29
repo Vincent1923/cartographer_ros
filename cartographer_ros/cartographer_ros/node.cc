@@ -426,7 +426,7 @@ int Node::AddTrajectory(const TrajectoryOptions& options,
   // 通过函数 ComputeExpectedSensorIds() 根据配置选项 options 获取 SendorId。
   // 所谓的 SensorId 是定义在 "trajectory_builder_interface.h" 中的一个结构体，它一共有两个字段，
   // type 通过枚举描述了传感器的类型，id 是一个字符串记录了传感器所对应的 ROS 主题名称。
-  // expected_sensor_ids 为订阅的传感器主题名称的集合。
+  // expected_sensor_ids 是 Cartographer ROS 订阅的所有传感器主题名称和类型的集合。
   const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
       expected_sensor_ids = ComputeExpectedSensorIds(options, topics);
   // 通过接口 map_builder_bridge_ 向 Cartographer 添加一条新的轨迹并获取轨迹的索引。
