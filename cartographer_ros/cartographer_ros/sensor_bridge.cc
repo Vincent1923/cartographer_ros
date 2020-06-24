@@ -309,14 +309,21 @@ void SensorBridge::HandleRangefinder(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id, const carto::sensor::TimedPointCloud& ranges) {
   // 通过 tf_bridge_ 对象查询传感器坐标系相对于机器人坐标系之间的坐标变换，记录在对象 sensor_to_tracking 中。
-  // frame_id 是传感器坐标系名称，例如单线激光扫描消息一般为 "laser_link"。
-  // tracking_frame_ 是机器人坐标系名称，一般为 "base_link" 或 "base_footprint"。
+  // frame_id 是传感器坐标系名称，例如，单线激光扫描消息一般为 "laser_link"。
+  // tracking_frame_ 是机器人坐标系名称，例如，当不使用 IMU 时，一般为 "base_link"。
   const auto sensor_to_tracking =
       tf_bridge_.LookupToTracking(time, CheckNoLeadingSlash(frame_id));
   if (sensor_to_tracking != nullptr) {
-    // 调用 trajectory_builder_->AddSensorData() 函数把点云数据喂给 Cartographer 进行后序的处理。
-    // TransformTimedPointCloud() 函数把传感器坐标系(frame_id)下的点云数据 ranges
-    // 变换到机器人坐标系(tracking_frame_)下。
+    /**
+     * 1. 调用 trajectory_builder_->AddSensorData() 函数把点云数据喂给 Cartographer 进行后序的处理。
+     * 2. 函数的第二个输入参数构造了一个 TimedPointCloudData 类型的扫描数据，它包含三个字段，
+     *    第一个字段 time 是获取最后一个扫描点的时间，
+     *    第二个字段 sensor_to_tracking->translation().cast<float>() 是当次扫描测量时传感器在机器人坐标系下的位置，
+     *    第三个字段则是扫描数据在机器人坐标系下的空间坐标。
+     *    而函数里面的 ranges 则是扫描数据在传感器坐标系下的空间坐标。
+     * 3. 函数 TransformTimedPointCloud() 把传感器坐标系(frame_id)下的点云数据 ranges 变换到机器人坐标系(tracking_frame_)下。
+     *    例如，当不使用 IMU 时，传感器坐标系 frame_id 可以为 "laser_link"，机器人坐标系 tracking_frame_ 可以为 "base_link"。
+     */
     trajectory_builder_->AddSensorData(
         sensor_id, carto::sensor::TimedPointCloudData{
                        time, sensor_to_tracking->translation().cast<float>(),
